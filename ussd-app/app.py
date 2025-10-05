@@ -23,6 +23,42 @@ AT_SENDER_ID = os.getenv('AT_SENDER_ID', 'EOFarm')
 # User sessions storage (in production, use Redis)
 user_sessions = {}
 
+# Rewards system
+REWARDS_POINTS = {
+    'weather_check': 5,
+    'advisory_view': 10,
+    'market_check': 5,
+    'daily_login': 2,
+    'farm_info_update': 15,
+    'first_time_user': 50
+}
+
+# Mock user database for demo
+user_database = {
+    '254712345678': {
+        'name': 'John Mwangi',
+        'location': 'Machakos',
+        'latitude': -1.2921,
+        'longitude': 36.8219,
+        'crops': ['maize', 'beans'],
+        'farm_size': 2.0,
+        'points': 120,
+        'level': 'Bronze',
+        'signup_date': '2024-01-15'
+    },
+    '254723456789': {
+        'name': 'Grace Njeri',
+        'location': 'Kiambu', 
+        'latitude': -1.2000,
+        'longitude': 36.9000,
+        'crops': ['tomatoes', 'coffee'],
+        'farm_size': 10.0,
+        'points': 85,
+        'level': 'Bronze',
+        'signup_date': '2024-02-20'
+    }
+}
+
 # Demo farmer data
 demo_farmers = {
     '254712345678': {
@@ -206,6 +242,67 @@ def get_farmer_data(phone_number):
         'crops': ['maize'],
         'farm_size': 1.0
     })
+
+def is_new_user(phone_number):
+    """Check if user is new (not in database)"""
+    return phone_number not in user_database and phone_number not in demo_farmers
+
+def add_rewards_points(phone_number, action):
+    """Add rewards points for user action"""
+    if phone_number in user_database:
+        points = REWARDS_POINTS.get(action, 0)
+        user_database[phone_number]['points'] += points
+        
+        # Update level based on points
+        total_points = user_database[phone_number]['points']
+        if total_points >= 500:
+            user_database[phone_number]['level'] = 'Gold'
+        elif total_points >= 200:
+            user_database[phone_number]['level'] = 'Silver'
+        else:
+            user_database[phone_number]['level'] = 'Bronze'
+        
+        return points
+    return 0
+
+def get_user_level(points):
+    """Get user level based on points"""
+    if points >= 500:
+        return 'Gold'
+    elif points >= 200:
+        return 'Silver'
+    else:
+        return 'Bronze'
+
+def format_rewards_info(user_data):
+    """Format rewards information for display"""
+    points = user_data.get('points', 0)
+    level = user_data.get('level', 'Bronze')
+    
+    response = f"🎁 Rewards Status:\n"
+    response += f"Points: {points}\n"
+    response += f"Level: {level}\n"
+    
+    if level == 'Bronze':
+        next_level = "Silver (200 pts)"
+    elif level == 'Silver':
+        next_level = "Gold (500 pts)"
+    else:
+        next_level = "Max Level!"
+    
+    response += f"Next: {next_level}\n\n"
+    
+    # Show available rewards
+    if points >= 50:
+        response += "Available Rewards:\n"
+        if points >= 50:
+            response += "• Free SMS (50 pts)\n"
+        if points >= 100:
+            response += "• Weather Alert (100 pts)\n"
+        if points >= 200:
+            response += "• Premium Advisory (200 pts)\n"
+    
+    return response
 
 def get_localized_text(language):
     """Get localized text for different languages"""
@@ -524,16 +621,32 @@ def ussd_handler():
                 language = farmer.get('language', 'en')
                 localized_text = get_localized_text(language)
                 
-                response = f"CON {localized_text['welcome']}\n"
-                response += f"{localized_text['hello']} {farmer['name']}!\n"
-                response += "Powered by NASA satellite data\n\n"
-                response += f"1. {localized_text['weather']}\n"
-                response += f"2. {localized_text['advice']}\n"
-                response += f"3. {localized_text['prices']}\n"
-                response += f"4. {localized_text['farm_info']}\n"
-                response += f"5. {localized_text['manage_farms']}\n"
-                response += f"6. Settings\n"
-                response += f"0. {localized_text['help']}"
+                # Check if user is new and needs sign-up
+                if is_new_user(phone_number):
+                    response = "CON Welcome to EO Farm Navigators!\n\n"
+                    response += "🎉 New User Bonus: 50 points!\n\n"
+                    response += "Let's get you started:\n"
+                    response += "1. Complete Registration\n"
+                    response += "2. Skip for now\n"
+                    response += "0. Exit"
+                    update_user_session(session_id, {'state': 'new_user_signup'})
+                else:
+                    # Add rewards points for daily login
+                    points_earned = add_rewards_points(phone_number, 'daily_login')
+                    
+                    response = f"CON {localized_text['welcome']}\n"
+                    response += f"{localized_text['hello']} {farmer['name']}!\n"
+                    if points_earned > 0:
+                        response += f"🎁 +{points_earned} points earned!\n"
+                    response += "Powered by NASA satellite data\n\n"
+                    response += f"1. {localized_text['weather']}\n"
+                    response += f"2. {localized_text['advice']}\n"
+                    response += f"3. {localized_text['prices']}\n"
+                    response += f"4. {localized_text['farm_info']}\n"
+                    response += f"5. {localized_text['manage_farms']}\n"
+                    response += f"6. Settings\n"
+                    response += f"7. 🎁 Rewards\n"
+                    response += f"0. {localized_text['help']}"
                 
                 update_user_session(session_id, {'state': 'main_menu', 'farmer': farmer, 'session_token': farmer.get('session_token')})
         
@@ -700,7 +813,11 @@ def ussd_handler():
                     })
                     
                     if weather_data:
+                        # Add rewards points for weather check
+                        points_earned = add_rewards_points(phone_number, 'weather_check')
                         response = f"END {format_weather_response(weather_data, location_name)}"
+                        if points_earned > 0:
+                            response += f"\n\n🎁 +{points_earned} points earned!"
                         # Send SMS for farm weather (non-blocking)
                         try:
                             import threading
@@ -802,7 +919,11 @@ def ussd_handler():
                 'crop': farmer['crops'][0],
                 'farm_size_ha': farmer['farm_size']
             })
+            # Add rewards points for advisory view
+            points_earned = add_rewards_points(phone_number, 'advisory_view')
             response = f"END {format_advisory_response(advisory_data)}\n\nDetailed advice sent via SMS!"
+            if points_earned > 0:
+                response += f"\n\n🎁 +{points_earned} points earned!"
             
         elif text == '3':
             # Market prices submenu
@@ -818,22 +939,34 @@ def ussd_handler():
         elif text == '3*1':
             # Maize prices
             market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'maize', 'location': 'Nairobi'})
+            points_earned = add_rewards_points(phone_number, 'market_check')
             response = f"END {format_market_response(market_data, 'maize')}\n\nMore prices sent via SMS!"
+            if points_earned > 0:
+                response += f"\n\n🎁 +{points_earned} points earned!"
             
         elif text == '3*2':
             # Beans prices
             market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'beans', 'location': 'Nairobi'})
+            points_earned = add_rewards_points(phone_number, 'market_check')
             response = f"END {format_market_response(market_data, 'beans')}\n\nMore prices sent via SMS!"
+            if points_earned > 0:
+                response += f"\n\n🎁 +{points_earned} points earned!"
             
         elif text == '3*3':
             # Tomatoes prices
             market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'tomatoes', 'location': 'Nairobi'})
+            points_earned = add_rewards_points(phone_number, 'market_check')
             response = f"END {format_market_response(market_data, 'tomatoes')}\n\nMore prices sent via SMS!"
+            if points_earned > 0:
+                response += f"\n\n🎁 +{points_earned} points earned!"
             
         elif text == '3*4':
             # Coffee prices
             market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'coffee', 'location': 'Nairobi'})
+            points_earned = add_rewards_points(phone_number, 'market_check')
             response = f"END {format_market_response(market_data, 'coffee')}\n\nMore prices sent via SMS!"
+            if points_earned > 0:
+                response += f"\n\n🎁 +{points_earned} points earned!"
             
         elif text == '4':
             # My farm info
@@ -886,6 +1019,114 @@ def ussd_handler():
             response += "4. My Farm - Your farm details\n\n"
             response += "Powered by NASA satellite data\n"
             response += "Visit: eofarm.africa"
+        
+        # Handle new user sign-up
+        elif session.get('state') == 'new_user_signup':
+            if text == '1':
+                response = "CON Complete Registration:\n\n"
+                response += "Enter your name:\n"
+                response += "0. Back"
+                update_user_session(session_id, {'state': 'signup_name'})
+            elif text == '2':
+                # Skip registration, add to database with basic info
+                user_database[phone_number] = {
+                    'name': 'Farmer',
+                    'location': 'Unknown',
+                    'latitude': -1.2921,
+                    'longitude': 36.8219,
+                    'crops': ['maize'],
+                    'farm_size': 1.0,
+                    'points': 50,  # New user bonus
+                    'level': 'Bronze',
+                    'signup_date': datetime.now().strftime('%Y-%m-%d')
+                }
+                add_rewards_points(phone_number, 'first_time_user')
+                
+                response = "CON Registration completed!\n"
+                response += "🎉 Welcome bonus: 50 points!\n\n"
+                response += "1. Weather Forecast\n"
+                response += "2. Farming Advice\n"
+                response += "3. Market Prices\n"
+                response += "4. My Farm Info\n"
+                response += "7. 🎁 Rewards\n"
+                response += "0. Help"
+                update_user_session(session_id, {'state': 'main_menu'})
+            elif text == '0':
+                response = "END Thank you for using EO Farm Navigators!"
+            else:
+                response = "CON Invalid option:\n\n"
+                response += "1. Complete Registration\n"
+                response += "2. Skip for now\n"
+                response += "0. Exit"
+        
+        elif session.get('state') == 'signup_name':
+            if text == '0':
+                response = "CON Welcome to EO Farm Navigators!\n\n"
+                response += "🎉 New User Bonus: 50 points!\n\n"
+                response += "Let's get you started:\n"
+                response += "1. Complete Registration\n"
+                response += "2. Skip for now\n"
+                response += "0. Exit"
+                update_user_session(session_id, {'state': 'new_user_signup'})
+            else:
+                # Store name and ask for location
+                update_user_session(session_id, {'signup_name': text})
+                response = "CON Enter your location:\n"
+                response += "1. Machakos\n"
+                response += "2. Nairobi\n"
+                response += "3. Meru\n"
+                response += "4. Nakuru\n"
+                response += "0. Back"
+                update_user_session(session_id, {'state': 'signup_location'})
+        
+        elif session.get('state') == 'signup_location':
+            if text == '0':
+                response = "CON Enter your name:\n"
+                response += "0. Back"
+                update_user_session(session_id, {'state': 'signup_name'})
+            elif text in ['1', '2', '3', '4']:
+                locations = ['Machakos', 'Nairobi', 'Meru', 'Nakuru']
+                location = locations[int(text) - 1]
+                
+                # Complete registration
+                user_database[phone_number] = {
+                    'name': session.get('signup_name', 'Farmer'),
+                    'location': location,
+                    'latitude': -1.2921 if text == '1' else -1.2000 if text == '2' else -0.0500 if text == '3' else -0.3000,
+                    'longitude': 36.8219 if text == '1' else 36.9000 if text == '2' else 37.6500 if text == '3' else 36.0500,
+                    'crops': ['maize'],
+                    'farm_size': 1.0,
+                    'points': 50,  # New user bonus
+                    'level': 'Bronze',
+                    'signup_date': datetime.now().strftime('%Y-%m-%d')
+                }
+                add_rewards_points(phone_number, 'first_time_user')
+                
+                response = "CON Registration completed!\n"
+                response += f"Welcome {session.get('signup_name', 'Farmer')}!\n"
+                response += "🎉 Bonus: 50 points earned!\n\n"
+                response += "1. Weather Forecast\n"
+                response += "2. Farming Advice\n"
+                response += "3. Market Prices\n"
+                response += "4. My Farm Info\n"
+                response += "7. 🎁 Rewards\n"
+                response += "0. Help"
+                update_user_session(session_id, {'state': 'main_menu'})
+            else:
+                response = "CON Invalid location:\n\n"
+                response += "1. Machakos\n"
+                response += "2. Nairobi\n"
+                response += "3. Meru\n"
+                response += "4. Nakuru\n"
+                response += "0. Back"
+        
+        # Handle rewards menu
+        elif text == '7':
+            if phone_number in user_database:
+                user_data = user_database[phone_number]
+                response = f"END {format_rewards_info(user_data)}"
+            else:
+                response = "END Rewards not available.\nPlease complete registration first."
             
         else:
             # Invalid input
