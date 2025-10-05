@@ -30,9 +30,9 @@ export function HeroSection() {
           </h1>
 
           {/* Subheading */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto text-pretty">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto text-pretty">
             MavunoAI brings NASA's satellite technology to your farm. Get real-time insights on soil moisture, crop
-            health, and weather to maximize your harvest.
+            health, and weather to maximize your harvest. <span className="text-emerald-600 font-semibold">Earn M-Pesa points, join cooperatives, and compete with fellow farmers!</span>
           </p>
 
           {/* CTAs */}
@@ -50,18 +50,22 @@ export function HeroSection() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 pt-12 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12 max-w-4xl mx-auto">
             <div className="space-y-2">
               <div className="text-3xl md:text-4xl font-bold text-primary">KES 48k+</div>
               <div className="text-sm text-muted-foreground">Extra Income per Acre</div>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-secondary">50%</div>
-              <div className="text-sm text-muted-foreground">Loss Reduction</div>
+              <div className="text-3xl md:text-4xl font-bold text-emerald-600">2,450</div>
+              <div className="text-sm text-muted-foreground">M-Pesa Points Earned</div>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl md:text-4xl font-bold text-accent">20%</div>
-              <div className="text-sm text-muted-foreground">Feed Cost Savings</div>
+              <div className="text-3xl md:text-4xl font-bold text-sky-600">72</div>
+              <div className="text-sm text-muted-foreground">Active Farmers</div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl md:text-4xl font-bold text-amber-600">15</div>
+              <div className="text-sm text-muted-foreground">Cooperatives</div>
             </div>
           </div>
         </div>

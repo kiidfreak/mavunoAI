@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Droplets, Leaf, CloudRain, TrendingUp, Smartphone, Globe } from "lucide-react"
+import { Droplets, Leaf, CloudRain, TrendingUp, Smartphone, Globe, CreditCard, Users, Trophy } from "lucide-react"
 
 const features = [
   {
@@ -44,6 +44,27 @@ const features = [
       "Advice tailored to your specific crop, location, and farming practices. Start with onions or dairy, expand as you grow. Both seasonal and continuous impact.",
     color: "text-primary",
   },
+  {
+    icon: CreditCard,
+    title: "M-Pesa Integration",
+    description:
+      "Earn M-Pesa points for successful farming decisions. Trade harvests for virtual currency, buy inputs with points, and receive real-world rewards from top cooperatives.",
+    color: "text-emerald-600",
+  },
+  {
+    icon: Users,
+    title: "Farmer Network",
+    description:
+      "Connect with fellow farmers, share successful strategies, and get real-time pest alerts. Join cooperatives for collective bargaining and resource sharing.",
+    color: "text-sky-600",
+  },
+  {
+    icon: Trophy,
+    title: "County Competitions",
+    description:
+      "Compete in friendly county leaderboards. Machakos vs Kiambu rivalry drives innovation. Top performers earn input vouchers and recognition.",
+    color: "text-amber-600",
+  },
 ]
 
 export function FeaturesSection() {
@@ -60,7 +81,7 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {features.map((feature, index) => (
             <Card key={index} className="border-2 hover:border-primary/50 transition-colors">
               <CardHeader>
