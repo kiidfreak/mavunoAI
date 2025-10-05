@@ -1,4 +1,5 @@
-# 🌍 EO Farm Navigators - MVP Hackathon Demo
+# 🌍 MavunoAI - Modular Farm Intelligence Platform
+## NASA Space Apps Challenge 2025
 
 ## Quick Start (5 minutes to demo)
 
@@ -16,7 +17,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### 2. Frontend Setup (You)
+### 2. Frontend Setup (mavunoAI Next.js)
 ```bash
 cd frontend
 npm install

@@ -1,6 +1,6 @@
 /**
- * EO Farm Navigators - WhatsApp Bot
- * Handles farmer interactions via WhatsApp
+ * MavunoAI - Enhanced WhatsApp Bot
+ * Handles farmer interactions with USSD features, rewards, and multi-language support
  */
 
 import express from 'express';
@@ -30,23 +30,31 @@ app.use(express.urlencoded({ extended: true }));
 // User sessions storage (in production, use Redis)
 const userSessions = new Map();
 
-// Demo farmer data
+// Enhanced farmer data with MavunoAI features
 const demoFarmers = {
-  '+254712345678': {
-    name: 'John Mwangi',
-    location: 'Machakos',
+  '+254115568694': {
+    name: 'Test Farmer',
+    location: 'Nairobi County',
     latitude: -1.2921,
     longitude: 36.8219,
-    crops: ['maize', 'beans'],
-    farm_size: 2.0
+    crops: ['onions'],
+    farm_size: 2.5,
+    language: 'en',
+    mavunoPoints: 2450,
+    level: 'Sustainable Pioneer',
+    sustainabilityScore: 87
   },
-  '+254723456789': {
-    name: 'Grace Njeri', 
-    location: 'Kiambu',
+  '+254111548797': {
+    name: 'Test2',
+    location: 'Loresho KARLO',
     latitude: -1.2000,
     longitude: 36.9000,
-    crops: ['tomatoes', 'coffee'],
-    farm_size: 10.0
+    crops: ['honey'],
+    farm_size: 5.0,
+    language: 'kik',
+    mavunoPoints: 1890,
+    level: 'Eco Beekeeper',
+    sustainabilityScore: 91
   }
 };
 
@@ -67,10 +75,29 @@ function getUserSession(phoneNumber) {
     userSessions.set(phoneNumber, {
       state: 'main_menu',
       data: {},
-      lastActivity: new Date()
+      lastActivity: new Date(),
+      points: 0,
+      rewards: [],
+      language: 'en'
     });
   }
   return userSessions.get(phoneNumber);
+}
+
+// Kikuyu translations
+function getKikuyuText(key) {
+  const translations = {
+    'welcome': 'Karibu MavunoAI',
+    'main_menu': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'weather': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'soil_health': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'market_prices': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'rewards': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'language': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ',
+    'mavuno_points': 'Mavuno Points',
+    'sustainability_score': 'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ'
+  };
+  return translations[key] || key;
 }
 
 function updateUserSession(phoneNumber, updates) {
@@ -173,6 +200,53 @@ function formatMarketPricesMessage(marketData) {
   return message;
 }
 
+// Enhanced USSD-style menu handler
+function showMainMenu(farmer, session) {
+  const isKikuyu = session.language === 'kik' || farmer.language === 'kik';
+  
+  if (isKikuyu) {
+    return `🌱 *MavunoAI - Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ*
+
+*Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ:*
+1️⃣ *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ* - Weather forecast
+2️⃣ *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ* - Soil health check  
+3️⃣ *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ* - Market prices
+4️⃣ *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ* - Rewards & Points
+5️⃣ *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ* - Language: ${isKikuyu ? 'Kikuyu' : 'English'}
+
+*Mavuno Points:* ${farmer.mavunoPoints}
+*Level:* ${farmer.level}
+
+*Commands:*
+• Type number (1-5) to select
+• Type "redeem [reward]" to redeem
+• Type "points" to check balance
+• Type "menu" for this menu
+
+*MavunoAI Team* 🌱`;
+  }
+  
+  return `🌱 *MavunoAI - Sustainable Farming Assistant*
+
+*Main Menu:*
+1️⃣ *Weather Forecast* - Get weather updates
+2️⃣ *Soil Health* - Check soil conditions  
+3️⃣ *Market Prices* - View crop prices
+4️⃣ *Rewards & Points* - Earn and redeem rewards
+5️⃣ *Language* - Switch to ${isKikuyu ? 'English' : 'Kikuyu'}
+
+*Mavuno Points:* ${farmer.mavunoPoints}
+*Level:* ${farmer.level}
+
+*Commands:*
+• Type number (1-5) to select
+• Type "redeem [reward]" to redeem
+• Type "points" to check balance
+• Type "menu" for this menu
+
+*MavunoAI Team* 🌱`;
+}
+
 // Main message handler
 async function handleIncomingMessage(req, res) {
   const { Body, From, To } = req.body;
@@ -187,8 +261,8 @@ async function handleIncomingMessage(req, res) {
   let response = '';
 
   try {
-    // Handle different message types
-    if (userMessage.includes('weather') || userMessage.includes('forecast')) {
+    // Handle USSD-style menu navigation
+    if (userMessage === '1' || userMessage.includes('weather') || userMessage.includes('forecast')) {
       const weatherData = await callBackendAPI('/api/v1/weather/forecast', {
         latitude: farmer.latitude,
         longitude: farmer.longitude,
@@ -223,16 +297,84 @@ async function handleIncomingMessage(req, res) {
       response += `Reply with: "simulate maize 2024-03-15 2.0"`;
       updateUserSession(phoneNumber, { state: 'simulation_input' });
 
-    } else if (userMessage.includes('help') || userMessage === 'hi' || userMessage === 'hello') {
-      response = `🌍 *Welcome to EO Farm Navigators!*\n\n`;
-      response += `I'm your agricultural assistant powered by NASA satellite data.\n\n`;
-      response += `*Available commands:*\n`;
-      response += `🌤️ "weather" - Get weather forecast\n`;
-      response += `🌾 "advice" - Get farming recommendations\n`;
-      response += `💰 "prices" - Check market prices\n`;
-      response += `📊 "simulate" - Run yield simulation\n`;
-      response += `❓ "help" - Show this menu\n\n`;
-      response += `Just type any command to get started!`;
+    } else if (userMessage === '4' || userMessage.includes('rewards') || userMessage.includes('points')) {
+      const rewards = [
+        { name: 'Organic Seeds', points: 500, emoji: '🌱' },
+        { name: 'Weather Station', points: 1000, emoji: '📱' },
+        { name: 'Farming Course', points: 750, emoji: '🎓' }
+      ];
+      
+      const isKikuyu = session.language === 'kik' || farmer.language === 'kik';
+      
+      if (isKikuyu) {
+        response = `🎁 *Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ*\n\n`;
+        response += `*Available Rewards:*\n`;
+        rewards.forEach((reward, index) => {
+          response += `${index + 1}️⃣ ${reward.emoji} ${reward.name} - ${reward.points} pts\n`;
+        });
+        response += `\n*Your Points:* ${farmer.mavunoPoints}\n`;
+        response += `*Max Points Today:* 500 (You can earn ${500 - farmer.mavunoPoints} more)\n\n`;
+        response += `*Commands:*\n`;
+        response += `• Type "redeem 1" for Organic Seeds\n`;
+        response += `• Type "redeem 2" for Weather Station\n`;
+        response += `• Type "redeem 3" for Farming Course\n\n`;
+        response += `*MavunoAI Team* 🌱`;
+      } else {
+        response = `🎁 *Rewards & Points*\n\n`;
+        response += `*Available Rewards:*\n`;
+        rewards.forEach((reward, index) => {
+          response += `${index + 1}️⃣ ${reward.emoji} ${reward.name} - ${reward.points} pts\n`;
+        });
+        response += `\n*Your Points:* ${farmer.mavunoPoints}\n`;
+        response += `*Max Points Today:* 500 (You can earn ${500 - farmer.mavunoPoints} more)\n\n`;
+        response += `*Commands:*\n`;
+        response += `• Type "redeem 1" for Organic Seeds\n`;
+        response += `• Type "redeem 2" for Weather Station\n`;
+        response += `• Type "redeem 3" for Farming Course\n\n`;
+        response += `*MavunoAI Team* 🌱`;
+      }
+      updateUserSession(phoneNumber, { state: 'main_menu' });
+
+    } else if (userMessage === '5' || userMessage.includes('language')) {
+      const isKikuyu = session.language === 'kik' || farmer.language === 'kik';
+      session.language = isKikuyu ? 'en' : 'kik';
+      
+      response = isKikuyu ? 
+        'Language switched to English. Type "menu" to see the main menu.' :
+        'Gĩthũngũrũrũ Gĩa Gũthũngũrũrũ Gĩa Gũthũngũrũrũ Gĩa Gũthũngũrũrũ';
+      updateUserSession(phoneNumber, { state: 'main_menu' });
+
+    } else if (userMessage.includes('redeem')) {
+      const rewardNumber = userMessage.match(/redeem (\d+)/)?.[1];
+      const rewards = [
+        { name: 'Organic Seeds', points: 500 },
+        { name: 'Weather Station', points: 1000 },
+        { name: 'Farming Course', points: 750 }
+      ];
+      
+      if (!rewardNumber) {
+        response = 'Please specify reward number (1-3)';
+      } else {
+        const selectedReward = rewards[parseInt(rewardNumber) - 1];
+        
+        if (!selectedReward) {
+          response = 'Invalid reward number';
+        } else if (farmer.mavunoPoints < selectedReward.points) {
+          response = `Not enough points. You need ${selectedReward.points - farmer.mavunoPoints} more points.`;
+        } else {
+          response = `🎉 *Reward Redeemed Successfully!*\n\n`;
+          response += `*Reward:* ${selectedReward.name}\n`;
+          response += `*Points Used:* ${selectedReward.points}\n`;
+          response += `*Remaining Points:* ${farmer.mavunoPoints - selectedReward.points}\n\n`;
+          response += `*Delivery:* 3-5 business days\n`;
+          response += `*Contact:* +254 700 000 000\n\n`;
+          response += `*MavunoAI Team* 🌱`;
+        }
+      }
+      updateUserSession(phoneNumber, { state: 'main_menu' });
+
+    } else if (userMessage.includes('help') || userMessage === 'hi' || userMessage === 'hello' || userMessage === 'menu' || userMessage === '0') {
+      response = showMainMenu(farmer, session);
       updateUserSession(phoneNumber, { state: 'main_menu' });
 
     } else if (session.state === 'simulation_input') {
@@ -281,14 +423,16 @@ async function handleIncomingMessage(req, res) {
       updateUserSession(phoneNumber, { state: 'main_menu' });
 
     } else {
-      // Default response
-      response = `🤔 I didn't understand that. Try one of these commands:\n\n`;
-      response += `🌤️ "weather" - Weather forecast\n`;
-      response += `🌾 "advice" - Farming advice\n`;
-      response += `💰 "prices" - Market prices\n`;
-      response += `📊 "simulate" - Yield simulation\n`;
-      response += `❓ "help" - Show all commands`;
+      // Default response - show main menu
+      response = showMainMenu(farmer, session);
       updateUserSession(phoneNumber, { state: 'main_menu' });
+    }
+
+    // Award points for interactions
+    if (userMessage !== 'menu' && userMessage !== '0' && userMessage !== 'help') {
+      const pointsEarned = 50; // Base points for interaction
+      farmer.mavunoPoints += pointsEarned;
+      console.log(`Awarded ${pointsEarned} points to ${phoneNumber}. Total: ${farmer.mavunoPoints}`);
     }
 
   } catch (error) {
@@ -317,17 +461,19 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'EO Farm Navigators WhatsApp Bot',
+    message: 'MavunoAI Enhanced WhatsApp Bot',
     status: 'running',
-    version: '1.0.0'
+    version: '2.0.0',
+    features: ['USSD-style menu', 'Rewards system', 'Kikuyu language support', 'Points tracking']
   });
 });
 
 // Start server
 app.listen(port, () => {
-  console.log(`🌍 EO Farm Navigators WhatsApp Bot running on port ${port}`);
+  console.log(`🌱 MavunoAI Enhanced WhatsApp Bot running on port ${port}`);
   console.log(`📱 Webhook URL: http://localhost:${port}/webhook`);
   console.log(`🔗 Backend API: ${API_BASE_URL}`);
+  console.log(`🎯 Features: USSD-style menu, Rewards system, Kikuyu language support`);
 });
 
 export default app;

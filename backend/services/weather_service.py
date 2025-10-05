@@ -2,7 +2,7 @@
 Weather Service - Integrates with NASA CHIRPS, Kenya Met, and Digital Earth Africa
 """
 
-import httpx
+import requests
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional

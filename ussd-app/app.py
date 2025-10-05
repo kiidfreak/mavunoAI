@@ -15,6 +15,11 @@ app = Flask(__name__)
 # Backend API URL
 API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:8000')
 
+# Africa's Talking Configuration
+AT_USERNAME = os.getenv('AT_USERNAME', 'sandbox')
+AT_API_KEY = os.getenv('AT_API_KEY', 'your_api_key_here')
+AT_SENDER_ID = os.getenv('AT_SENDER_ID', 'EOFarm')
+
 # User sessions storage (in production, use Redis)
 user_sessions = {}
 
@@ -39,7 +44,33 @@ demo_farmers = {
 }
 
 def get_farmer_data(phone_number):
-    """Get farmer data by phone number"""
+    """Get farmer data by phone number from backend API"""
+    try:
+        # Try to authenticate with backend
+        response = requests.post(f"{API_BASE_URL}/api/v1/farmer/login", 
+                               params={"phone_number": phone_number}, 
+                               timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success'):
+                farmer_info = data.get('farmer', {})
+                return {
+                    'name': farmer_info.get('name', 'Farmer'),
+                    'location': farmer_info.get('location', 'Unknown'),
+                    'latitude': farmer_info.get('home_latitude', -1.2921),
+                    'longitude': farmer_info.get('home_longitude', 36.8219),
+                    'crops': ['maize'],
+                    'farm_size': 1.0,
+                    'session_token': data.get('session_token'),
+                    'farmer_id': farmer_info.get('id'),
+                    'language': farmer_info.get('language', 'en'),
+                    'is_verified': farmer_info.get('is_verified', False),
+                    'home_location_name': farmer_info.get('home_location_name', 'Unknown')
+                }
+    except Exception as e:
+        print(f"Backend authentication failed: {e}")
+    
+    # Fallback to demo data
     return demo_farmers.get(phone_number, {
         'name': 'Farmer',
         'location': 'Unknown',
@@ -48,6 +79,46 @@ def get_farmer_data(phone_number):
         'crops': ['maize'],
         'farm_size': 1.0
     })
+
+def get_localized_text(language):
+    """Get localized text for different languages"""
+    translations = {
+        "en": {
+            "welcome": "Welcome to EO Farm Navigators!",
+            "hello": "Hello",
+            "weather": "Weather Forecast",
+            "advice": "Farming Advice", 
+            "prices": "Market Prices",
+            "farm_info": "My Farm Info",
+            "manage_farms": "Manage Farms",
+            "help": "Help",
+            "settings": "Settings"
+        },
+        "sw": {
+            "welcome": "Karibu EO Farm Navigators!",
+            "hello": "Hujambo",
+            "weather": "Hali ya Hewa",
+            "advice": "Ushauri wa Kilimo",
+            "prices": "Bei za Soko",
+            "farm_info": "Taarifa ya Shamba",
+            "manage_farms": "Simamia Mashamba",
+            "help": "Msaada",
+            "settings": "Mipangilio"
+        },
+        "kik": {
+            "welcome": "Wamukire EO Farm Navigators!",
+            "hello": "Wamukire",
+            "weather": "Hali ya Riu",
+            "advice": "Uthuthi wa Kurima",
+            "prices": "Mari ya Githaka",
+            "farm_info": "Uthuthi wa Githaka",
+            "manage_farms": "Thutha Mashamba",
+            "help": "Uthuthi",
+            "settings": "Mikurire"
+        }
+    }
+    
+    return translations.get(language, translations["en"])
 
 def get_user_session(session_id):
     """Get or create user session"""
@@ -70,14 +141,92 @@ def call_backend_api(endpoint, data=None):
     """Call backend API"""
     try:
         url = f"{API_BASE_URL}{endpoint}"
+        print(f"Calling backend API: {url}")
         if data:
             response = requests.post(url, json=data, timeout=10)
         else:
             response = requests.get(url, timeout=10)
-        return response.json() if response.status_code == 200 else None
+        
+        print(f"Backend response status: {response.status_code}")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Backend API error: {response.status_code} - {response.text}")
+            return None
     except Exception as e:
         print(f"Backend API error: {e}")
         return None
+
+def send_sms(phone_number, message):
+    """Send SMS via Africa's Talking"""
+    try:
+        # Check if API key is configured
+        if AT_API_KEY == 'your_api_key_here' or not AT_API_KEY:
+            print(f"SMS not sent - API key not configured. Message would be: {message[:100]}...")
+            return False
+            
+        url = "https://api.africastalking.com/version1/messaging"
+        headers = {
+            "apiKey": AT_API_KEY,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
+        }
+        data = {
+            "username": AT_USERNAME,
+            "to": phone_number,
+            "message": message,
+            "from": AT_SENDER_ID
+        }
+        
+        print(f"Attempting to send SMS to {phone_number} via Africa's Talking...")
+        response = requests.post(url, headers=headers, data=data, timeout=10)
+        print(f"SMS API response: {response.status_code} - {response.text}")
+        
+        if response.status_code == 201:
+            print(f"SMS sent successfully to {phone_number}: {message[:50]}...")
+            return True
+        else:
+            print(f"SMS failed: {response.text}")
+            return False
+    except Exception as e:
+        print(f"SMS error: {e}")
+        return False
+
+def send_weather_sms(phone_number, weather_data, location_name):
+    """Send detailed weather SMS"""
+    try:
+        print(f"send_weather_sms called for {phone_number} at {location_name}")
+        if not weather_data:
+            print("No weather data provided")
+            return False
+            
+        sms_message = f"MavunoAI - {location_name} Weather\n\n"
+        current = weather_data.get('current', {})
+        sms_message += f"Today: {current.get('conditions', 'Unknown')}, {current.get('temperature_c', 0)}°C\n"
+        sms_message += f"Humidity: {current.get('humidity_percent', 0)}%\n"
+        sms_message += f"Wind: {current.get('wind_speed_kmh', 0)} km/h\n\n"
+        
+        forecast = weather_data.get('forecast', [])
+        if forecast:
+            sms_message += "7-Day Forecast:\n"
+            for i, day in enumerate(forecast[:7]):
+                sms_message += f"Day {i+1}: {day.get('conditions', 'Unknown')} - {day.get('temp_min_c', 0)}-{day.get('temp_max_c', 0)}°C\n"
+        
+        # Add rainfall info
+        total_rainfall = sum(day.get('rainfall_mm', 0) for day in forecast[:7])
+        sms_message += f"\nWeekly Rainfall: {total_rainfall:.0f}mm"
+        
+        if total_rainfall > 20:
+            sms_message += "\nGood planting conditions!"
+        elif total_rainfall > 10:
+            sms_message += "\nModerate rainfall expected"
+        else:
+            sms_message += "\nLow rainfall - consider irrigation"
+        
+        return send_sms(phone_number, sms_message)
+    except Exception as e:
+        print(f"Weather SMS error: {e}")
+        return False
 
 def format_weather_response(weather_data, location_name):
     """Format weather data for USSD display"""
@@ -154,55 +303,280 @@ def format_market_response(market_data, commodity):
     
     return response
 
-@app.route('/ussd', methods=['POST'])
+@app.route('/ussd', methods=['GET', 'POST'])
 def ussd_handler():
-    """Main USSD handler"""
+    """Main USSD handler for Africa's Talking"""
     try:
-        session_id = request.values.get('sessionId')
-        phone_number = request.values.get('phoneNumber', '').replace('+', '')
-        text = request.values.get('text', '').strip()
+        # Handle GET requests (testing/health check)
+        if request.method == 'GET':
+            return jsonify({
+                'message': 'MavunoAI USSD Service',
+                'status': 'ready',
+                'endpoint': '/ussd',
+                'methods': ['GET', 'POST']
+            })
         
-        print(f"USSD Request - Session: {session_id}, Phone: {phone_number}, Text: '{text}'")
+        # Africa's Talking USSD webhook format
+        session_id = request.values.get('sessionId')
+        phone_number = request.values.get('phoneNumber', '')
+        # Ensure phone number has + prefix for backend API
+        if not phone_number.startswith('+'):
+            phone_number = '+' + phone_number
+        text = request.values.get('text', '').strip()
+        service_code = request.values.get('serviceCode', '*384*12345#')
+        
+        print(f"USSD Request - Session: {session_id}, Phone: {phone_number}, Text: '{text}', Service: {service_code}")
         
         # Get farmer data
-        farmer = get_farmer_data(phone_number)
+        try:
+            farmer = get_farmer_data(phone_number)
+            print(f"Farmer data retrieved: {farmer.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"Error getting farmer data: {e}")
+            farmer = {
+                'name': 'Farmer',
+                'location': 'Unknown',
+                'latitude': -1.2921,
+                'longitude': 36.8219,
+                'crops': ['maize'],
+                'farm_size': 1.0
+            }
+        
         session = get_user_session(session_id)
         
         # Handle different states
         if text == '':
-            # Initial menu
-            response = "CON Welcome to EO Farm Navigators!\n"
-            response += "Powered by NASA satellite data\n\n"
-            response += "1. Weather Forecast\n"
-            response += "2. Farming Advice\n"
-            response += "3. Market Prices\n"
-            response += "4. My Farm Info\n"
-            response += "0. Help"
+            # Check if farmer is verified
+            if not farmer.get('is_verified', False):
+                # Send verification code
+                try:
+                    verify_response = requests.post(f"{API_BASE_URL}/api/v1/farmer/send-verification", 
+                                                 params={"phone_number": phone_number}, timeout=5)
+                    if verify_response.status_code == 200:
+                        verify_data = verify_response.json()
+                        if verify_data.get('success'):
+                            response = "CON Phone verification required!\n\n"
+                            response += f"Verification code sent to {phone_number}\n"
+                            response += "Enter the 6-digit code:\n"
+                            response += "0. Back"
+                            update_user_session(session_id, {'state': 'verification'})
+                        else:
+                            response = "END Service temporarily unavailable.\nPlease try again later."
+                    else:
+                        response = "END Service temporarily unavailable.\nPlease try again later."
+                except Exception as e:
+                    print(f"Verification error: {e}")
+                    response = "END Service temporarily unavailable.\nPlease try again later."
+            else:
+                # Show personalized menu
+                language = farmer.get('language', 'en')
+                localized_text = get_localized_text(language)
+                
+                response = f"CON {localized_text['welcome']}\n"
+                response += f"{localized_text['hello']} {farmer['name']}!\n"
+                response += "Powered by NASA satellite data\n\n"
+                response += f"1. {localized_text['weather']}\n"
+                response += f"2. {localized_text['advice']}\n"
+                response += f"3. {localized_text['prices']}\n"
+                response += f"4. {localized_text['farm_info']}\n"
+                response += f"5. {localized_text['manage_farms']}\n"
+                response += f"6. Settings\n"
+                response += f"0. {localized_text['help']}"
+                
+                update_user_session(session_id, {'state': 'main_menu', 'farmer': farmer, 'session_token': farmer.get('session_token')})
+        
+        elif session.get('state') == 'verification':
+            # Handle verification code
+            if text.isdigit() and len(text) == 6:
+                try:
+                    verify_response = requests.post(f"{API_BASE_URL}/api/v1/farmer/verify-code", 
+                                                   params={"phone_number": phone_number, "code": text}, timeout=5)
+                    if verify_response.status_code == 200:
+                        verify_data = verify_response.json()
+                        if verify_data.get('success'):
+                            # Verification successful, show language selection
+                            response = "CON Phone verified successfully!\n\n"
+                            response += "Choose your language:\n"
+                            response += "1. English\n"
+                            response += "2. Kiswahili\n"
+                            response += "3. Kikuyu\n"
+                            response += "0. Back"
+                            update_user_session(session_id, {'state': 'language_selection'})
+                        else:
+                            response = f"CON Invalid code. Try again:\n\n"
+                            response += f"Enter 6-digit code:\n"
+                            response += "0. Back"
+                    else:
+                        response = "CON Invalid code. Try again:\n\n"
+                        response += f"Enter 6-digit code:\n"
+                        response += "0. Back"
+                except Exception as e:
+                    print(f"Verification error: {e}")
+                    response = "END Service temporarily unavailable.\nPlease try again later."
+            elif text == '0':
+                response = "END Thank you for using EO Farm Navigators!"
+            else:
+                response = "CON Invalid code format.\n\n"
+                response += f"Enter 6-digit code:\n"
+                response += "0. Back"
+        
+        elif session.get('state') == 'language_selection':
+            # Handle language selection
+            if text == '1':
+                language = 'en'
+            elif text == '2':
+                language = 'sw'
+            elif text == '3':
+                language = 'kik'
+            elif text == '0':
+                response = "END Thank you for using EO Farm Navigators!"
+            else:
+                response = "CON Invalid selection.\n\n"
+                response += "Choose your language:\n"
+                response += "1. English\n"
+                response += "2. Kiswahili\n"
+                response += "3. Kikuyu\n"
+                response += "0. Back"
+                return response
             
-            update_user_session(session_id, {'state': 'main_menu'})
+            # Update farmer language
+            try:
+                lang_response = requests.post(f"{API_BASE_URL}/api/v1/farmer/update-language", 
+                                            params={"phone_number": phone_number, "language": language}, timeout=5)
+                if lang_response.status_code == 200:
+                    # Show main menu with selected language
+                    localized_text = get_localized_text(language)
+                    response = f"CON {localized_text['welcome']}\n"
+                    response += f"{localized_text['hello']} {farmer['name']}!\n"
+                    response += "Powered by NASA satellite data\n\n"
+                    response += f"1. {localized_text['weather']}\n"
+                    response += f"2. {localized_text['advice']}\n"
+                    response += f"3. {localized_text['prices']}\n"
+                    response += f"4. {localized_text['farm_info']}\n"
+                    response += f"5. {localized_text['manage_farms']}\n"
+                    response += f"6. Settings\n"
+                    response += f"0. {localized_text['help']}"
+                    update_user_session(session_id, {'state': 'main_menu', 'farmer': farmer, 'session_token': farmer.get('session_token')})
+                else:
+                    response = "END Service temporarily unavailable.\nPlease try again later."
+            except Exception as e:
+                print(f"Language update error: {e}")
+                response = "END Service temporarily unavailable.\nPlease try again later."
             
         elif text == '1':
-            # Weather submenu
-            response = "CON Select location:\n"
-            response += "1. Machakos\n"
-            response += "2. Nairobi\n"
-            response += "3. Meru\n"
-            response += "4. Nakuru\n"
-            response += "0. Back"
+            # Weather submenu - show farmer's farms
+            try:
+                # First try to get farmer's farms using session token
+                session_data = get_user_session(session_id)
+                session_token = session_data.get('session_token')
+                print(f"Weather menu: session_token={session_token}")
+                
+                if session_token:
+                    # Get farmer's farms from backend with session token
+                    farms_response = requests.get(f"{API_BASE_URL}/api/v1/farmer/farms", 
+                                                params={"session_token": session_token}, timeout=5)
+                    if farms_response.status_code == 200:
+                        farms_data = farms_response.json()
+                        farms = farms_data.get('farms', [])
+                        
+                        if farms:
+                            response = "CON Select your farm:\n"
+                            for i, farm in enumerate(farms[:4], 1):  # Limit to 4 farms for USSD
+                                response += f"{i}. {farm.get('name', 'Farm')} ({farm.get('location', 'Unknown')})\n"
+                            response += f"{len(farms)+1}. Other location\n"
+                            response += "0. Back"
+                            
+                            # Store farms in session for later use
+                            update_user_session(session_id, {'state': 'weather_farm_selection', 'farms': farms})
+                        else:
+                            response = "CON No farms found. Select location:\n"
+                            response += "1. Machakos\n"
+                            response += "2. Nairobi\n"
+                            response += "3. Meru\n"
+                            response += "4. Nakuru\n"
+                            response += "0. Back"
+                            update_user_session(session_id, {'state': 'weather_location'})
+                    else:
+                        # Fallback to hardcoded locations
+                        response = "CON Select location:\n"
+                        response += "1. Machakos\n"
+                        response += "2. Nairobi\n"
+                        response += "3. Meru\n"
+                        response += "4. Nakuru\n"
+                        response += "0. Back"
+                        update_user_session(session_id, {'state': 'weather_location'})
+                else:
+                    # No session token, use hardcoded locations
+                    response = "CON Select location:\n"
+                    response += "1. Machakos\n"
+                    response += "2. Nairobi\n"
+                    response += "3. Meru\n"
+                    response += "4. Nakuru\n"
+                    response += "0. Back"
+                    update_user_session(session_id, {'state': 'weather_location'})
+            except Exception as e:
+                print(f"Error getting farms: {e}")
+                # Fallback to hardcoded locations
+                response = "CON Select location:\n"
+                response += "1. Machakos\n"
+                response += "2. Nairobi\n"
+                response += "3. Meru\n"
+                response += "4. Nakuru\n"
+                response += "0. Back"
+                update_user_session(session_id, {'state': 'weather_location'})
             
-            update_user_session(session_id, {'state': 'weather_location'})
-            
+        elif text.startswith('1*') and len(text.split('*')) == 2:
+            # Handle farm selection (1*1, 1*2, etc.)
+            try:
+                session_data = get_user_session(session_id)
+                farms = session_data.get('farms', [])
+                farm_index = int(text.split('*')[1]) - 1
+                print(f"Farm selection: index={farm_index}, farms_count={len(farms)}")
+                
+                if 0 <= farm_index < len(farms):
+                    # Selected a farm
+                    farm = farms[farm_index]
+                    location_name = farm.get('location', 'Farm')
+                    coordinates = farm.get('coordinates', {})
+                    latitude = coordinates.get('lat', -1.2921)
+                    longitude = coordinates.get('lon', 36.8219)
+                    
+                    weather_data = call_backend_api('/api/v1/weather/forecast', {
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'days': 7
+                    })
+                    
+                    if weather_data:
+                        response = f"END {format_weather_response(weather_data, location_name)}\n\nMore details sent via SMS!"
+                        # Send SMS for farm weather
+                        send_weather_sms(phone_number, weather_data, location_name)
+                    else:
+                        response = "END Weather service temporarily unavailable.\nPlease try again later."
+                else:
+                    # Invalid farm selection
+                    response = "END Invalid selection. Please try again."
+            except Exception as e:
+                print(f"Farm weather error: {e}")
+                response = "END Weather service temporarily unavailable.\nPlease try again later."
+                
         elif text == '1*1':
-            # Machakos weather
-            weather_data = call_backend_api('/api/v1/weather/forecast', {
-                'latitude': -1.2921,
-                'longitude': 36.8219,
-                'days': 7
-            })
-            response = f"END {format_weather_response(weather_data, 'Machakos')}\n\nMore details sent via SMS!"
-            
-            # Send detailed SMS (mock)
-            print(f"SMS sent to {phone_number}: Detailed weather forecast")
+            # Machakos weather (fallback for hardcoded locations)
+            try:
+                weather_data = call_backend_api('/api/v1/weather/forecast', {
+                    'latitude': -1.2921,
+                    'longitude': 36.8219,
+                    'days': 7
+                })
+                if weather_data:
+                    response = f"END {format_weather_response(weather_data, 'Machakos')}\n\nMore details sent via SMS!"
+                    # Send SMS for Machakos
+                    send_weather_sms(phone_number, weather_data, 'Machakos')
+                else:
+                    response = "END Weather service temporarily unavailable.\nPlease try again later or visit our web dashboard."
+            except Exception as e:
+                print(f"Weather API error: {e}")
+                response = "END Weather service temporarily unavailable.\nPlease try again later or visit our web dashboard."
             
         elif text == '1*2':
             # Nairobi weather
@@ -212,6 +586,8 @@ def ussd_handler():
                 'days': 7
             })
             response = f"END {format_weather_response(weather_data, 'Nairobi')}\n\nMore details sent via SMS!"
+            # Send SMS for Nairobi
+            send_weather_sms(phone_number, weather_data, 'Nairobi')
             
         elif text == '1*3':
             # Meru weather
@@ -221,6 +597,8 @@ def ussd_handler():
                 'days': 7
             })
             response = f"END {format_weather_response(weather_data, 'Meru')}\n\nMore details sent via SMS!"
+            # Send SMS for Meru
+            send_weather_sms(phone_number, weather_data, 'Meru')
             
         elif text == '1*4':
             # Nakuru weather
@@ -230,6 +608,8 @@ def ussd_handler():
                 'days': 7
             })
             response = f"END {format_weather_response(weather_data, 'Nakuru')}\n\nMore details sent via SMS!"
+            # Send SMS for Nakuru
+            send_weather_sms(phone_number, weather_data, 'Nakuru')
             
         elif text == '2':
             # Farming advice
@@ -282,6 +662,39 @@ def ussd_handler():
             response += f"Crops: {', '.join(farmer['crops'])}\n\n"
             response += "For detailed analysis, visit our web dashboard!"
             
+        elif text == '5':
+            # Farm management
+            if farmer.get('session_token'):
+                # Get farms from backend
+                try:
+                    farms_response = requests.get(
+                        f"{API_BASE_URL}/api/v1/farmer/farms",
+                        params={"session_token": farmer['session_token']},
+                        timeout=5
+                    )
+                    if farms_response.status_code == 200:
+                        farms_data = farms_response.json()
+                        farms = farms_data.get('farms', [])
+                        
+                        if farms:
+                            response = "CON Your Farms:\n"
+                            for i, farm in enumerate(farms[:3], 1):  # Limit to 3 farms for USSD
+                                response += f"{i}. {farm['name']}\n"
+                                response += f"   {farm['location']} - {farm['size_acres']} acres\n"
+                                response += f"   Crop: {farm['primary_crop']}\n"
+                            response += "0. Back"
+                        else:
+                            response = "CON No farms registered.\n\n"
+                            response += "1. Add New Farm\n"
+                            response += "0. Back"
+                    else:
+                        response = "END Unable to load farms. Try again later."
+                except Exception as e:
+                    print(f"Error fetching farms: {e}")
+                    response = "END Service temporarily unavailable."
+            else:
+                response = "END Please register first. Visit our web dashboard!"
+            
         elif text == '0':
             # Help
             response = "CON EO Farm Navigators Help:\n\n"
@@ -309,6 +722,48 @@ def ussd_handler():
         print(f"USSD Error: {e}")
         return "END Sorry, service temporarily unavailable. Please try again later."
 
+@app.route('/events', methods=['POST'])
+def events_handler():
+    """Handle Africa's Talking events"""
+    try:
+        event_data = request.get_json()
+        print(f"Africa's Talking Event: {event_data}")
+        
+        # Log different event types
+        event_type = event_data.get('eventType', 'unknown')
+        
+        if event_type == 'ussd_session_started':
+            print(f"USSD Session Started: {event_data.get('sessionId')}")
+        elif event_type == 'ussd_session_ended':
+            print(f"USSD Session Ended: {event_data.get('sessionId')}")
+        elif event_type == 'sms_delivery_report':
+            print(f"SMS Delivery Report: {event_data.get('messageId')} - {event_data.get('status')}")
+        
+        return jsonify({'status': 'received'})
+    except Exception as e:
+        print(f"Events handler error: {e}")
+        return jsonify({'status': 'error'}), 500
+
+@app.route('/', methods=['GET', 'POST'])
+def root():
+    """Root endpoint - handle USSD requests"""
+    try:
+        # If this is a USSD request, handle it like the /ussd endpoint
+        if request.method == 'POST' and request.values.get('sessionId'):
+            # This is a USSD request, redirect to USSD handler
+            return ussd_handler()
+        else:
+            # This is a health check or test request
+            return jsonify({
+                'message': 'MavunoAI USSD Service',
+                'status': 'ready',
+                'endpoint': '/ussd',
+                'methods': ['GET', 'POST']
+            })
+    except Exception as e:
+        print(f"Root handler error: {e}")
+        return "END Sorry, service temporarily unavailable. Please try again later."
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -318,14 +773,6 @@ def health_check():
         'active_sessions': len(user_sessions)
     })
 
-@app.route('/', methods=['GET'])
-def home():
-    """Home endpoint"""
-    return jsonify({
-        'message': 'EO Farm Navigators USSD Service',
-        'status': 'running',
-        'version': '1.0.0'
-    })
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

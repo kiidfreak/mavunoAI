@@ -44,7 +44,7 @@ pip install -r requirements.txt
 echo ✅ Backend dependencies installed
 
 echo.
-echo Setting up frontend...
+echo Setting up frontend (mavunoAI Next.js)...
 cd ..\frontend
 npm install
 echo ✅ Frontend dependencies installed
@@ -119,7 +119,7 @@ echo echo Starting Backend...
 echo start "Backend" cmd /k "cd backend && call venv\Scripts\activate.bat && python main.py"
 echo timeout /t 3 /nobreak ^>nul
 echo.
-echo echo Starting Frontend...
+echo echo Starting Frontend (mavunoAI Next.js)...
 echo start "Frontend" cmd /k "cd frontend && npm run dev"
 echo timeout /t 3 /nobreak ^>nul
 echo.
@@ -134,7 +134,7 @@ echo.
 echo echo 🚀 All services started!
 echo echo.
 echo echo 📱 Access Points:
-echo echo   • Web Dashboard: http://localhost:3000
+echo echo   • mavunoAI Web App: http://localhost:3000
 echo echo   • Backend API: http://localhost:8000
 echo echo   • API Docs: http://localhost:8000/docs
 echo echo   • WhatsApp Bot: http://localhost:3001
