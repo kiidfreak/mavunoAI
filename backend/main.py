@@ -19,6 +19,8 @@ from services.advisory_service import AdvisoryService
 from services.carbon_service import CarbonService
 from services.apiary_service import ApiaryService
 from services.farmer_service import FarmerService
+from services.aflatoxin_service import AflatoxinService
+from services.cooperative_service import CooperativeService
 from database import get_db, create_tables
 from models.schemas import (
     WeatherRequest, WeatherResponse,
@@ -51,6 +53,7 @@ simulation_service = SimulationService()
 advisory_service = AdvisoryService()
 carbon_service = CarbonService()
 apiary_service = ApiaryService()
+aflatoxin_service = AflatoxinService()
 
 @app.get("/")
 async def root():
@@ -439,6 +442,117 @@ async def get_demo_entities():
             }
         ]
     }
+
+# Aflatoxin Prevention Endpoints
+@app.get("/api/v1/aflatoxin/risk-assessment")
+async def get_aflatoxin_risk(latitude: float, longitude: float, crop_stage: str):
+    """Get aflatoxin risk assessment for farm location"""
+    try:
+        location = {"lat": latitude, "lon": longitude}
+        risk_assessment = aflatoxin_service.check_aflatoxin_risk(location, crop_stage)
+        return risk_assessment
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Aflatoxin risk assessment failed: {str(e)}")
+
+@app.get("/api/v1/aflatoxin/aflasafe-recommendations")
+async def get_aflasafe_recommendations(latitude: float, longitude: float, farm_size_ha: float):
+    """Get Aflasafe biocontrol recommendations"""
+    try:
+        location = {"lat": latitude, "lon": longitude}
+        recommendations = aflatoxin_service.get_aflasafe_recommendations(location, farm_size_ha)
+        return recommendations
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Aflasafe recommendations failed: {str(e)}")
+
+@app.get("/api/v1/aflatoxin/national-impact")
+async def get_national_aflatoxin_impact():
+    """Get national aflatoxin impact statistics"""
+    try:
+        impact_data = aflatoxin_service.get_national_aflatoxin_impact()
+        return impact_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"National impact data failed: {str(e)}")
+
+# Cooperative/Community Endpoints
+@app.post("/api/v1/cooperative/create")
+async def create_cooperative(name: str, county: str, founder_farmer_id: str, db=Depends(get_db)):
+    """Create a new cooperative"""
+    try:
+        cooperative_service = CooperativeService(db)
+        result = cooperative_service.create_cooperative(name, county, founder_farmer_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cooperative creation failed: {str(e)}")
+
+@app.post("/api/v1/cooperative/join")
+async def join_cooperative(cooperative_id: str, farmer_id: str, contribution_kes: float = 0.0, db=Depends(get_db)):
+    """Farmer joins a cooperative"""
+    try:
+        cooperative_service = CooperativeService(db)
+        result = cooperative_service.join_cooperative(cooperative_id, farmer_id, contribution_kes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Join cooperative failed: {str(e)}")
+
+@app.get("/api/v1/cooperative/{cooperative_id}/dashboard")
+async def get_cooperative_dashboard(cooperative_id: str, db=Depends(get_db)):
+    """Get comprehensive cooperative dashboard"""
+    try:
+        cooperative_service = CooperativeService(db)
+        dashboard = cooperative_service.get_cooperative_dashboard(cooperative_id)
+        return dashboard
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cooperative dashboard failed: {str(e)}")
+
+@app.get("/api/v1/cooperative/county-ranking")
+async def get_county_ranking(county: str, metric_type: str = "sustainability", db=Depends(get_db)):
+    """Get county leaderboard ranking"""
+    try:
+        cooperative_service = CooperativeService(db)
+        ranking = cooperative_service.get_county_ranking(county, metric_type)
+        return ranking
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"County ranking failed: {str(e)}")
+
+@app.get("/api/v1/cooperative/leaderboard")
+async def get_leaderboard(metric_type: str = "sustainability", period: str = "monthly", db=Depends(get_db)):
+    """Get county leaderboards for competition"""
+    try:
+        cooperative_service = CooperativeService(db)
+        leaderboard = cooperative_service.get_leaderboard(metric_type, period)
+        return leaderboard
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Leaderboard failed: {str(e)}")
+
+@app.post("/api/v1/cooperative/pool-resources")
+async def pool_resources(cooperative_id: str, resource_type: str, quantity: float, unit: str, cost_kes: float, db=Depends(get_db)):
+    """Pool resources within cooperative"""
+    try:
+        cooperative_service = CooperativeService(db)
+        result = cooperative_service.pool_resources(cooperative_id, resource_type, quantity, unit, cost_kes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resource pooling failed: {str(e)}")
+
+@app.post("/api/v1/cooperative/share-resource")
+async def share_resource(from_cooperative_id: str, to_cooperative_id: str, resource_type: str, quantity: float, unit: str, cost_kes: float = 0.0, db=Depends(get_db)):
+    """Share resources between cooperatives"""
+    try:
+        cooperative_service = CooperativeService(db)
+        result = cooperative_service.share_resource(from_cooperative_id, to_cooperative_id, resource_type, quantity, unit, cost_kes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resource sharing failed: {str(e)}")
+
+@app.get("/api/v1/cooperative/peer-mentorship")
+async def get_peer_mentorship_matches(farmer_id: str, db=Depends(get_db)):
+    """Get peer mentorship matches based on complementary skills"""
+    try:
+        cooperative_service = CooperativeService(db)
+        matches = cooperative_service.get_peer_mentorship_matches(farmer_id)
+        return matches
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Peer mentorship failed: {str(e)}")
 
 # Initialize database on startup
 @app.on_event("startup")

@@ -28,4 +28,6 @@ def get_db():
 def create_tables():
     """Create all database tables"""
     from models.farmer import Base
+    from models.cooperative import Base as CooperativeBase
     Base.metadata.create_all(bind=engine)
+    CooperativeBase.metadata.create_all(bind=engine)
