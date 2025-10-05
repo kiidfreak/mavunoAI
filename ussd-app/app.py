@@ -16,9 +16,9 @@ app = Flask(__name__)
 API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:8000')
 
 # Africa's Talking Configuration
-AT_USERNAME = os.getenv('AT_USERNAME', 'sandbox')
-AT_API_KEY = os.getenv('AT_API_KEY', 'your_api_key_here')
-AT_SENDER_ID = os.getenv('AT_SENDER_ID', 'EOFarm')
+AT_USERNAME = os.getenv('AT_USERNAME', 'your_username_here')
+AT_API_KEY = os.getenv('AT_API_KEY', 'atsk_66edaebd775b571170ca20c0f621acf544cac8d7d8c5d14158ee26a9490cd45d857952f2')
+AT_SENDER_ID = os.getenv('AT_SENDER_ID', '29187')
 
 # User sessions storage (in production, use Redis)
 user_sessions = {}
@@ -431,8 +431,13 @@ def send_sms(phone_number, message):
     try:
         # Check if API key is configured
         if AT_API_KEY == 'your_api_key_here' or not AT_API_KEY:
-            print(f"SMS not sent - API key not configured. Message would be: {message[:100]}...")
-            return False
+            print(f"📱 SMS DEMO: {message[:100]}...")
+            print(f"📱 Would send to: {phone_number}")
+            print(f"📱 Full message: {message}")
+            return True  # Return True for demo purposes
+        
+        print(f"📱 Sending real SMS to {phone_number} via Africa's Talking...")
+        print(f"📱 Message: {message[:100]}...")
             
         url = "https://api.africastalking.com/version1/messaging"
         headers = {
@@ -624,6 +629,15 @@ def ussd_handler():
                     if verify_response.status_code == 200:
                         verify_data = verify_response.json()
                         if verify_data.get('success'):
+                            # Send verification SMS
+                            verification_code = verify_data.get('verification_code', '123456')
+                            sms_message = f"MavunoAI Verification Code: {verification_code}\n\n"
+                            sms_message += f"Enter this code in the USSD menu to continue.\n"
+                            sms_message += f"Code expires in 10 minutes.\n\n"
+                            sms_message += f"Reply STOP to opt out."
+                            
+                            send_sms(phone_number, sms_message)
+                            
                             response = "CON Phone verification required!\n\n"
                             response += f"Verification code sent to {phone_number}\n"
                             response += "Enter the 6-digit code:\n"
@@ -1062,6 +1076,15 @@ def ussd_handler():
                 }
                 add_rewards_points(phone_number, 'first_time_user')
                 
+                # Send welcome SMS for skipped registration
+                welcome_sms = f"🎉 Welcome to MavunoAI!\n\n"
+                welcome_sms += f"🎁 Welcome bonus: 50 points!\n"
+                welcome_sms += f"📱 USSD: *384*717111#\n"
+                welcome_sms += f"🌐 Web: eofarm.africa\n\n"
+                welcome_sms += f"Complete your profile later for more features!"
+                
+                send_sms(phone_number, welcome_sms)
+                
                 response = "CON Registration completed!\n"
                 response += "🎉 Welcome bonus: 50 points!\n\n"
                 response += "1. Weather Forecast\n"
@@ -1121,6 +1144,16 @@ def ussd_handler():
                     'signup_date': datetime.now().strftime('%Y-%m-%d')
                 }
                 add_rewards_points(phone_number, 'first_time_user')
+                
+                # Send welcome SMS
+                welcome_sms = f"🎉 Welcome to MavunoAI, {session.get('signup_name', 'Farmer')}!\n\n"
+                welcome_sms += f"📍 Location: {location}\n"
+                welcome_sms += f"🎁 Welcome bonus: 50 points!\n"
+                welcome_sms += f"📱 USSD: *384*717111#\n"
+                welcome_sms += f"🌐 Web: eofarm.africa\n\n"
+                welcome_sms += f"Get weather, advice & market prices instantly!"
+                
+                send_sms(phone_number, welcome_sms)
                 
                 response = "CON Registration completed!\n"
                 response += f"Welcome {session.get('signup_name', 'Farmer')}!\n"
