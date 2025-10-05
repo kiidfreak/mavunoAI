@@ -1,0 +1,14 @@
+{
+  "name": "mavuno-ai",
+  "version": "1.0.0",
+  "description": "MavunoAI - Smart Farming Platform",
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "dev": "cd frontend && npm run dev",
+    "start": "cd frontend && npm run start",
+    "install": "cd frontend && npm install"
+  },
+  "workspaces": [
+    "frontend"
+  ]
+}
