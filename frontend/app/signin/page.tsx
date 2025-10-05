@@ -15,36 +15,94 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleDemoFarmer = (phone: string) => {
+  const handleDemoFarmer = async (phone: string) => {
     setPhoneNumber(phone)
     setVerificationCode("123456") // Demo verification code
     setIsLoading(true)
     
-    // Store farmer info in localStorage
-    const farmerInfo = {
-      name: phone === '+254115568694' ? 'Test Farmer' : 'Test2',
-      phone: phone,
-      location: phone === '+254115568694' ? 'Nairobi County' : 'Loresho KARLO',
-      language: phone === '+254115568694' ? 'en' : 'kik'
-    }
-    localStorage.setItem('farmerProfile', JSON.stringify(farmerInfo))
-    localStorage.setItem('farmerPhone', phone)
-    
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      // Authenticate with backend API
+      const response = await fetch(`http://localhost:8000/api/v1/farmer/login?phone_number=${encodeURIComponent(phone)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          // Store session token and farmer info
+          localStorage.setItem('sessionToken', data.session_token)
+          localStorage.setItem('farmerProfile', JSON.stringify(data.farmer))
+          localStorage.setItem('farmerPhone', phone)
+          
+          setIsLoading(false)
+          router.push("/dashboard")
+        } else {
+          throw new Error('Authentication failed')
+        }
+      } else {
+        throw new Error('Backend authentication failed')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      // Fallback to demo data if backend is unavailable
+      const farmerInfo = {
+        name: phone === '+254115568694' ? 'Test Farmer' : 'Test2',
+        phone: phone,
+        location: phone === '+254115568694' ? 'Nairobi County' : 'Loresho KARLO',
+        language: phone === '+254115568694' ? 'en' : 'kik'
+      }
+      localStorage.setItem('farmerProfile', JSON.stringify(farmerInfo))
+      localStorage.setItem('farmerPhone', phone)
+      
       setIsLoading(false)
       router.push("/dashboard")
-    }, 1500)
+    }
   }
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (phoneNumber && verificationCode) {
       setIsLoading(true)
-      setTimeout(() => {
+      
+      try {
+        // First send verification code
+        const verifyResponse = await fetch(`http://localhost:8000/api/v1/farmer/send-verification?phone_number=${encodeURIComponent(phoneNumber)}`, {
+          method: 'POST',
+        })
+        
+        if (verifyResponse.ok) {
+          // Then verify the code
+          const loginResponse = await fetch(`http://localhost:8000/api/v1/farmer/verify-code?phone_number=${encodeURIComponent(phoneNumber)}&code=${verificationCode}`, {
+            method: 'POST',
+          })
+          
+          if (loginResponse.ok) {
+            const data = await loginResponse.json()
+            if (data.success) {
+              // Store session token and farmer info
+              localStorage.setItem('sessionToken', data.session_token)
+              localStorage.setItem('farmerProfile', JSON.stringify(data.farmer))
+              localStorage.setItem('farmerPhone', phoneNumber)
+              
+              setIsLoading(false)
+              router.push("/dashboard")
+            } else {
+              throw new Error('Verification failed')
+            }
+          } else {
+            throw new Error('Code verification failed')
+          }
+        } else {
+          throw new Error('Could not send verification code')
+        }
+      } catch (error) {
+        console.error('Login error:', error)
         setIsLoading(false)
-        router.push("/dashboard")
-      }, 1500)
+        // You could show an error message to the user here
+      }
     }
   }
   return (

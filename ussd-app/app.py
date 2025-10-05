@@ -548,9 +548,15 @@ def ussd_handler():
                     })
                     
                     if weather_data:
-                        response = f"END {format_weather_response(weather_data, location_name)}\n\nMore details sent via SMS!"
-                        # Send SMS for farm weather
-                        send_weather_sms(phone_number, weather_data, location_name)
+                        response = f"END {format_weather_response(weather_data, location_name)}"
+                        # Send SMS for farm weather (non-blocking)
+                        try:
+                            import threading
+                            def send_sms_async():
+                                send_weather_sms(phone_number, weather_data, location_name)
+                            threading.Thread(target=send_sms_async, daemon=True).start()
+                        except:
+                            pass  # Continue even if SMS fails
                     else:
                         response = "END Weather service temporarily unavailable.\nPlease try again later."
                 else:
@@ -569,9 +575,15 @@ def ussd_handler():
                     'days': 7
                 })
                 if weather_data:
-                    response = f"END {format_weather_response(weather_data, 'Machakos')}\n\nMore details sent via SMS!"
-                    # Send SMS for Machakos
-                    send_weather_sms(phone_number, weather_data, 'Machakos')
+                    response = f"END {format_weather_response(weather_data, 'Machakos')}"
+                    # Send SMS for Machakos (non-blocking)
+                    try:
+                        import threading
+                        def send_sms_async():
+                            send_weather_sms(phone_number, weather_data, 'Machakos')
+                        threading.Thread(target=send_sms_async, daemon=True).start()
+                    except:
+                        pass  # Continue even if SMS fails
                 else:
                     response = "END Weather service temporarily unavailable.\nPlease try again later or visit our web dashboard."
             except Exception as e:
@@ -585,9 +597,15 @@ def ussd_handler():
                 'longitude': 36.8219,
                 'days': 7
             })
-            response = f"END {format_weather_response(weather_data, 'Nairobi')}\n\nMore details sent via SMS!"
-            # Send SMS for Nairobi
-            send_weather_sms(phone_number, weather_data, 'Nairobi')
+            response = f"END {format_weather_response(weather_data, 'Nairobi')}"
+            # Send SMS for Nairobi (non-blocking)
+            try:
+                import threading
+                def send_sms_async():
+                    send_weather_sms(phone_number, weather_data, 'Nairobi')
+                threading.Thread(target=send_sms_async, daemon=True).start()
+            except:
+                pass  # Continue even if SMS fails
             
         elif text == '1*3':
             # Meru weather
@@ -596,9 +614,15 @@ def ussd_handler():
                 'longitude': 37.6500,
                 'days': 7
             })
-            response = f"END {format_weather_response(weather_data, 'Meru')}\n\nMore details sent via SMS!"
-            # Send SMS for Meru
-            send_weather_sms(phone_number, weather_data, 'Meru')
+            response = f"END {format_weather_response(weather_data, 'Meru')}"
+            # Send SMS for Meru (non-blocking)
+            try:
+                import threading
+                def send_sms_async():
+                    send_weather_sms(phone_number, weather_data, 'Meru')
+                threading.Thread(target=send_sms_async, daemon=True).start()
+            except:
+                pass  # Continue even if SMS fails
             
         elif text == '1*4':
             # Nakuru weather
@@ -607,9 +631,15 @@ def ussd_handler():
                 'longitude': 36.0833,
                 'days': 7
             })
-            response = f"END {format_weather_response(weather_data, 'Nakuru')}\n\nMore details sent via SMS!"
-            # Send SMS for Nakuru
-            send_weather_sms(phone_number, weather_data, 'Nakuru')
+            response = f"END {format_weather_response(weather_data, 'Nakuru')}"
+            # Send SMS for Nakuru (non-blocking)
+            try:
+                import threading
+                def send_sms_async():
+                    send_weather_sms(phone_number, weather_data, 'Nakuru')
+                threading.Thread(target=send_sms_async, daemon=True).start()
+            except:
+                pass  # Continue even if SMS fails
             
         elif text == '2':
             # Farming advice

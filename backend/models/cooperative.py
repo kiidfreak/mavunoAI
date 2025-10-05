@@ -4,12 +4,12 @@ Research shows Kenya's success = cooperatives
 """
 
 from sqlalchemy import Column, String, Integer, Float, DateTime, Text, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
-Base = declarative_base()
+# Import Base from farmer models to ensure same metadata
+from models.farmer import Base
 
 class Cooperative(Base):
     """Cooperative/Chama model"""
@@ -36,7 +36,7 @@ class CooperativeMember(Base):
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     cooperative_id = Column(String, ForeignKey("cooperatives.id"), nullable=False)
-    farmer_id = Column(String, ForeignKey("farmers.id"), nullable=False)
+    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
     role = Column(String(50), default="member")  # member, leader, treasurer, secretary
     joined_at = Column(DateTime, default=datetime.utcnow)
     contribution_kes = Column(Float, default=0.0)

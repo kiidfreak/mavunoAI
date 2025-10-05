@@ -28,6 +28,8 @@ def get_db():
 def create_tables():
     """Create all database tables"""
     from models.farmer import Base
-    from models.cooperative import Base as CooperativeBase
+    # Import cooperative models to register them with the same Base
+    from models.cooperative import Cooperative, CooperativeMember, CooperativeResource, CooperativeActivity, CountyLeaderboard, ResourceSharing
+    
+    # Create all tables using the unified Base
     Base.metadata.create_all(bind=engine)
-    CooperativeBase.metadata.create_all(bind=engine)

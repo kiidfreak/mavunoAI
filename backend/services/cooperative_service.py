@@ -8,11 +8,11 @@ from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
-from backend.models.cooperative import (
+from models.cooperative import (
     Cooperative, CooperativeMember, CooperativeResource, 
     CooperativeActivity, CountyLeaderboard, ResourceSharing
 )
-from backend.models.farmer import Farmer
+from models.farmer import Farmer
 
 class CooperativeService:
     """Service for cooperative and community features"""
