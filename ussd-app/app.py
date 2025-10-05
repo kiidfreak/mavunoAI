@@ -43,6 +43,133 @@ demo_farmers = {
     }
 }
 
+# Mock data for instant responses
+MOCK_WEATHER_DATA = {
+    'machakos': {
+        'current': {
+            'conditions': 'Partly Cloudy',
+            'temperature_c': 24.5,
+            'humidity_percent': 65,
+            'wind_speed_kmh': 12
+        },
+        'forecast': [
+            {'conditions': 'Sunny', 'temp_min_c': 18, 'temp_max_c': 28},
+            {'conditions': 'Light Rain', 'temp_min_c': 16, 'temp_max_c': 25},
+            {'conditions': 'Cloudy', 'temp_min_c': 17, 'temp_max_c': 26},
+            {'conditions': 'Sunny', 'temp_min_c': 19, 'temp_max_c': 29},
+            {'conditions': 'Heavy Rain', 'temp_min_c': 15, 'temp_max_c': 23},
+            {'conditions': 'Partly Cloudy', 'temp_min_c': 17, 'temp_max_c': 27},
+            {'conditions': 'Sunny', 'temp_min_c': 20, 'temp_max_c': 30}
+        ]
+    },
+    'nairobi': {
+        'current': {
+            'conditions': 'Sunny',
+            'temperature_c': 26.2,
+            'humidity_percent': 58,
+            'wind_speed_kmh': 8
+        },
+        'forecast': [
+            {'conditions': 'Sunny', 'temp_min_c': 20, 'temp_max_c': 30},
+            {'conditions': 'Partly Cloudy', 'temp_min_c': 18, 'temp_max_c': 28},
+            {'conditions': 'Light Rain', 'temp_min_c': 16, 'temp_max_c': 25},
+            {'conditions': 'Sunny', 'temp_min_c': 19, 'temp_max_c': 29},
+            {'conditions': 'Cloudy', 'temp_min_c': 17, 'temp_max_c': 26},
+            {'conditions': 'Sunny', 'temp_min_c': 21, 'temp_max_c': 31},
+            {'conditions': 'Partly Cloudy', 'temp_min_c': 19, 'temp_max_c': 28}
+        ]
+    },
+    'meru': {
+        'current': {
+            'conditions': 'Cloudy',
+            'temperature_c': 22.8,
+            'humidity_percent': 72,
+            'wind_speed_kmh': 15
+        },
+        'forecast': [
+            {'conditions': 'Heavy Rain', 'temp_min_c': 15, 'temp_max_c': 22},
+            {'conditions': 'Light Rain', 'temp_min_c': 16, 'temp_max_c': 24},
+            {'conditions': 'Cloudy', 'temp_min_c': 17, 'temp_max_c': 25},
+            {'conditions': 'Sunny', 'temp_min_c': 18, 'temp_max_c': 27},
+            {'conditions': 'Partly Cloudy', 'temp_min_c': 19, 'temp_max_c': 28},
+            {'conditions': 'Sunny', 'temp_min_c': 20, 'temp_max_c': 29},
+            {'conditions': 'Light Rain', 'temp_min_c': 17, 'temp_max_c': 26}
+        ]
+    },
+    'nakuru': {
+        'current': {
+            'conditions': 'Partly Cloudy',
+            'temperature_c': 21.3,
+            'humidity_percent': 68,
+            'wind_speed_kmh': 10
+        },
+        'forecast': [
+            {'conditions': 'Sunny', 'temp_min_c': 16, 'temp_max_c': 26},
+            {'conditions': 'Cloudy', 'temp_min_c': 15, 'temp_max_c': 24},
+            {'conditions': 'Light Rain', 'temp_min_c': 14, 'temp_max_c': 22},
+            {'conditions': 'Sunny', 'temp_min_c': 17, 'temp_max_c': 27},
+            {'conditions': 'Partly Cloudy', 'temp_min_c': 18, 'temp_max_c': 28},
+            {'conditions': 'Sunny', 'temp_min_c': 19, 'temp_max_c': 29},
+            {'conditions': 'Cloudy', 'temp_min_c': 16, 'temp_max_c': 25}
+        ]
+    }
+}
+
+MOCK_ADVISORY_DATA = {
+    'alerts': [
+        {
+            'priority': 'high',
+            'title': 'Pest Alert',
+            'message': 'Fall armyworm detected in your area. Apply neem-based pesticides immediately.'
+        },
+        {
+            'priority': 'medium',
+            'title': 'Weather Warning',
+            'message': 'Heavy rainfall expected in 3 days. Harvest mature crops now.'
+        }
+    ],
+    'recommendations': [
+        {
+            'message': 'Plant drought-resistant maize varieties for better yield in dry conditions.'
+        },
+        {
+            'message': 'Apply organic compost to improve soil fertility and water retention.'
+        }
+    ],
+    'farm_health_score': 78
+}
+
+MOCK_MARKET_DATA = {
+    'maize': {
+        'location': 'Nairobi',
+        'current_price': 45,
+        'trend': 'increasing',
+        'price_change_7d_percent': 5.2,
+        'recommendation': 'Good time to sell. Prices expected to rise further.'
+    },
+    'beans': {
+        'location': 'Nairobi',
+        'current_price': 120,
+        'trend': 'stable',
+        'price_change_7d_percent': 0.8,
+        'recommendation': 'Hold for better prices. Market is stable.'
+    },
+    'tomatoes': {
+        'location': 'Nairobi',
+        'current_price': 80,
+        'trend': 'decreasing',
+        'price_change_7d_percent': -3.1,
+        'recommendation': 'Sell quickly. Prices are declining.'
+    },
+    'coffee': {
+        'location': 'Nairobi',
+        'current_price': 180,
+        'trend': 'increasing',
+        'price_change_7d_percent': 2.5,
+        'recommendation': 'Excellent time to sell. Export demand is high.'
+    }
+}
+
 def get_farmer_data(phone_number):
     """Get farmer data by phone number from backend API"""
     try:
@@ -138,14 +265,39 @@ def update_user_session(session_id, updates):
     user_sessions[session_id] = session
 
 def call_backend_api(endpoint, data=None):
-    """Call backend API"""
+    """Call backend API - now returns mock data for instant responses"""
+    print(f"Using mock data for: {endpoint}")
+    
+    # Return mock data based on endpoint
+    if '/weather/forecast' in endpoint:
+        location = 'nairobi'  # Default location
+        if data and 'latitude' in data:
+            lat = data['latitude']
+            if lat < -1.0:  # Machakos area
+                location = 'machakos'
+            elif lat > -0.5:  # Meru area
+                location = 'meru'
+            elif lat < -0.8:  # Nakuru area
+                location = 'nakuru'
+        return MOCK_WEATHER_DATA.get(location, MOCK_WEATHER_DATA['nairobi'])
+    
+    elif '/advisory' in endpoint:
+        return MOCK_ADVISORY_DATA
+    
+    elif '/market' in endpoint:
+        commodity = 'maize'  # Default
+        if data and 'commodity' in data:
+            commodity = data['commodity']
+        return MOCK_MARKET_DATA.get(commodity, MOCK_MARKET_DATA['maize'])
+    
+    # For other endpoints, try real API but with shorter timeout
     try:
         url = f"{API_BASE_URL}{endpoint}"
         print(f"Calling backend API: {url}")
         if data:
-            response = requests.post(url, json=data, timeout=10)
+            response = requests.post(url, json=data, timeout=3)  # Shorter timeout
         else:
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=3)
         
         print(f"Backend response status: {response.status_code}")
         if response.status_code == 200:
@@ -665,22 +817,22 @@ def ussd_handler():
             
         elif text == '3*1':
             # Maize prices
-            market_data = call_backend_api('/api/v1/market/prices?commodity=maize&location=Nairobi')
+            market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'maize', 'location': 'Nairobi'})
             response = f"END {format_market_response(market_data, 'maize')}\n\nMore prices sent via SMS!"
             
         elif text == '3*2':
             # Beans prices
-            market_data = call_backend_api('/api/v1/market/prices?commodity=beans&location=Nairobi')
+            market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'beans', 'location': 'Nairobi'})
             response = f"END {format_market_response(market_data, 'beans')}\n\nMore prices sent via SMS!"
             
         elif text == '3*3':
             # Tomatoes prices
-            market_data = call_backend_api('/api/v1/market/prices?commodity=tomatoes&location=Nairobi')
+            market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'tomatoes', 'location': 'Nairobi'})
             response = f"END {format_market_response(market_data, 'tomatoes')}\n\nMore prices sent via SMS!"
             
         elif text == '3*4':
             # Coffee prices
-            market_data = call_backend_api('/api/v1/market/prices?commodity=coffee&location=Nairobi')
+            market_data = call_backend_api('/api/v1/market/prices', {'commodity': 'coffee', 'location': 'Nairobi'})
             response = f"END {format_market_response(market_data, 'coffee')}\n\nMore prices sent via SMS!"
             
         elif text == '4':
