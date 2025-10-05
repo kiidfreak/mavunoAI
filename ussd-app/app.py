@@ -56,6 +56,18 @@ user_database = {
         'points': 85,
         'level': 'Bronze',
         'signup_date': '2024-02-20'
+    },
+    '254115568694': {
+        'name': 'Test2',
+        'location': 'Loresho KARLO',
+        'latitude': -1.2000,
+        'longitude': 36.9000,
+        'crops': ['onions', 'apiary'],
+        'farm_size': 5.0,
+        'points': 1890,
+        'level': 'Gold',
+        'signup_date': '2024-03-15',
+        'language': 'kik'
     }
 }
 
@@ -76,6 +88,14 @@ demo_farmers = {
         'longitude': 36.9000,
         'crops': ['tomatoes', 'coffee'],
         'farm_size': 10.0
+    },
+    '254115568694': {
+        'name': 'Test2',
+        'location': 'Loresho KARLO',
+        'latitude': -1.2000,
+        'longitude': 36.9000,
+        'crops': ['onions', 'apiary'],
+        'farm_size': 5.0
     }
 }
 
