@@ -106,111 +106,123 @@ export default function SignInPage() {
     }
   }
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
-      <Card className="w-full max-w-md relative">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <Card className="w-full max-w-2xl relative rounded-3xl shadow-2xl">
         {isLoading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-3xl flex items-center justify-center z-50">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Logging in...</p>
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto mb-4"></div>
+              <p className="text-xl font-semibold text-gray-700">🌱 Opening your farm...</p>
             </div>
           </div>
         )}
-        <CardHeader className="text-center space-y-4">
+        <CardHeader className="text-center space-y-6 pt-8">
           <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
-              <Sprout className="w-7 h-7 text-primary-foreground" />
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-600 to-blue-600 flex items-center justify-center shadow-lg">
+              <Sprout className="w-10 h-10 text-white" />
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl">🌱 Farmer Login</CardTitle>
-            <CardDescription>Access your sustainable farming dashboard</CardDescription>
+            <CardTitle className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              MavunoAI Credit
+            </CardTitle>
+            <CardDescription className="text-lg mt-2">
+              🛰️ Satellite-Powered Farming Finance
+            </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <form className="space-y-4" onSubmit={handleLogin}>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input 
-                id="phone" 
-                placeholder="+254 XXX XXX XXX" 
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="verification">Verification Code</Label>
-              <Input 
-                id="verification" 
-                placeholder="Enter SMS code" 
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                We'll send you a verification code via SMS
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <Button 
-                type="submit" 
-                size="lg" 
-                className="w-full"
-                disabled={!phoneNumber || !verificationCode || isLoading}
+        <CardContent className="space-y-8 pb-8">
+          {/* Visual Farmer Selection */}
+          <div>
+            <h3 className="text-xl font-bold text-center mb-6">👤 Choose Your Profile</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Mary - Onion Farmer */}
+              <button
+                onClick={() => handleDemoFarmer("+254712345678")}
+                disabled={isLoading}
+                className="group relative bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-orange-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50"
               >
-                {isLoading ? "🌱 Logging in..." : "🌱 Access My Farm Dashboard"}
-              </Button>
-              
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Demo Farmers:</p>
-                <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
-                    onClick={() => handleDemoFarmer("+254115568694")}
-                    disabled={isLoading}
-                  >
-                    {isLoading && phoneNumber === "+254115568694" ? "Loading..." : "🧅 Test Farmer (Onions) - +254115568694"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
-                    onClick={() => handleDemoFarmer("+254111548797")}
-                    disabled={isLoading}
-                  >
-                    {isLoading && phoneNumber === "+254111548797" ? "Loading..." : "🐝 Test2 (Apiary) - +254111548797"}
-                  </Button>
+                <div className="text-6xl mb-3">🧅</div>
+                <h4 className="text-xl font-bold text-gray-900 mb-1">Mary Wanjiru</h4>
+                <p className="text-sm text-gray-600 mb-2">Onion Farmer • Nakuru</p>
+                <div className="flex items-center justify-center gap-2 text-green-600 font-semibold">
+                  <span className="text-2xl">⭐</span>
+                  <span>High Score (82%)</span>
                 </div>
-              </div>
-            </div>
-          </form>
+                <div className="mt-3 text-xs text-gray-500">+254712345678</div>
+              </button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              {/* John - Maize Farmer */}
+              <button
+                onClick={() => handleDemoFarmer("+254723456789")}
+                disabled={isLoading}
+                className="group relative bg-gradient-to-br from-yellow-50 to-green-50 hover:from-yellow-100 hover:to-green-100 border-2 border-green-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50"
+              >
+                <div className="text-6xl mb-3">🌽</div>
+                <h4 className="text-xl font-bold text-gray-900 mb-1">John Kamau</h4>
+                <p className="text-sm text-gray-600 mb-2">Maize Farmer • Machakos</p>
+                <div className="flex items-center justify-center gap-2 text-blue-600 font-semibold">
+                  <span className="text-2xl">⭐</span>
+                  <span>Medium Score (65%)</span>
+                </div>
+                <div className="mt-3 text-xs text-gray-500">+254723456789</div>
+              </button>
+
+              {/* Grace - Beekeeper */}
+              <button
+                onClick={() => handleDemoFarmer("+254734567890")}
+                disabled={isLoading}
+                className="group relative bg-gradient-to-br from-yellow-50 to-amber-50 hover:from-yellow-100 hover:to-amber-100 border-2 border-amber-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50"
+              >
+                <div className="text-6xl mb-3">🐝</div>
+                <h4 className="text-xl font-bold text-gray-900 mb-1">Grace Njeri</h4>
+                <p className="text-sm text-gray-600 mb-2">Beekeeper • Kiambu</p>
+                <div className="flex items-center justify-center gap-2 text-green-600 font-semibold">
+                  <span className="text-2xl">⭐</span>
+                  <span>High Score (85%)</span>
+                </div>
+                <div className="mt-3 text-xs text-gray-500">+254734567890</div>
+              </button>
+
+              {/* New User */}
+              <button
+                onClick={() => handleDemoFarmer("+254700000000")}
+                disabled={isLoading}
+                className="group relative bg-gradient-to-br from-gray-50 to-blue-50 hover:from-gray-100 hover:to-blue-100 border-2 border-blue-200 border-dashed rounded-2xl p-6 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50"
+              >
+                <div className="text-6xl mb-3">➕</div>
+                <h4 className="text-xl font-bold text-gray-900 mb-1">New Farmer</h4>
+                <p className="text-sm text-gray-600 mb-2">Register & Get Score</p>
+                <div className="flex items-center justify-center gap-2 text-blue-600 font-semibold">
+                  <span className="text-2xl">🆕</span>
+                  <span>Start Your Journey</span>
+                </div>
+                <div className="mt-3 text-xs text-gray-500">+254700000000</div>
+              </button>
             </div>
           </div>
 
+          {/* Quick Access Buttons */}
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="w-full bg-transparent">
-              WhatsApp
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              USSD
-            </Button>
+            <Link href="/credit">
+              <Button className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-6 text-lg rounded-2xl shadow-lg">
+                💳 Credit Dashboard
+              </Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="outline" className="w-full border-2 border-green-600 text-green-600 hover:bg-green-50 py-6 text-lg rounded-2xl">
+                🌱 Farm Dashboard
+              </Button>
+            </Link>
           </div>
 
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link href="/dashboard" className="text-primary hover:underline font-medium">
-              Start Free Trial
-            </Link>
+          {/* Info Banner */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 text-center">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">🛰️ Powered by NASA Satellites</span>
+              <br />
+              Real-time soil moisture, rainfall & vegetation data
+            </p>
           </div>
         </CardContent>
       </Card>

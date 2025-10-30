@@ -13,54 +13,61 @@ import {
   Wind,
   Thermometer,
   AlertCircle,
+  CheckCircle,
   Sprout,
+  Phone,
   MapPin,
+  Calendar,
   Award,
   Users,
   BookOpen,
   Lightbulb
 } from "lucide-react";
 
-export default function DashboardPage() {
+export default function VisualDashboard() {
   const [farmerData, setFarmerData] = useState<any>(null);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [farmerPhone, setFarmerPhone] = useState("");
 
   useEffect(() => {
     const phone = localStorage.getItem('farmerPhone') || '+254712345678';
     const profile = localStorage.getItem('farmerProfile');
     
+    setFarmerPhone(phone);
+    
     if (profile) {
       try {
         setFarmerData(JSON.parse(profile));
       } catch (e) {
-        setFarmerData({
-          name: 'Mary Wanjiru',
-          phone: phone,
-          location: 'Nakuru County',
-          crop: 'Onion',
-          farm_size: 2.0,
-          level: 'Silver',
-          points: 85
-        });
+        setFarmerData(getMockFarmerData());
       }
     } else {
-      setFarmerData({
-        name: 'Mary Wanjiru',
-        phone: phone,
-        location: 'Nakuru County',
-        crop: 'Onion',
-        farm_size: 2.0,
-        level: 'Silver',
-        points: 85
-      });
+      setFarmerData(getMockFarmerData());
     }
+    
+    fetchWeatherData();
+  }, []);
+
+  const getMockFarmerData = () => ({
+    name: 'Mary Wanjiru',
+    phone: '+254712345678',
+    location: 'Nakuru County',
+    crop: 'Onion',
+    farm_size: 2.0,
+    level: 'Silver',
+    points: 85
+  });
+
+  const fetchWeatherData = async () => {
+    setLoading(true);
     
     // Mock weather data
     setWeatherData({
       temperature: 24,
       humidity: 68,
       rainfall_today: 12,
+      rainfall_week: 45,
       wind_speed: 8,
       soil_moisture: 0.28,
       forecast: [
@@ -72,7 +79,7 @@ export default function DashboardPage() {
     });
     
     setLoading(false);
-  }, []);
+  };
 
   if (loading) {
     return (
@@ -112,6 +119,7 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               <Button 
+                onClick={() => fetchWeatherData()}
                 variant="outline"
                 className="border-2 border-green-600 text-green-600 hover:bg-green-50 px-6 py-6 text-lg rounded-2xl"
               >
@@ -123,8 +131,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT PANEL: Weather */}
+        {/* LEFT PANEL: Weather & Farm Conditions */}
         <div className="space-y-6">
+          {/* Today's Weather */}
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl shadow-lg p-6 text-white">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <Sun className="w-6 h-6" />
@@ -133,7 +142,7 @@ export default function DashboardPage() {
             
             <div className="text-center mb-6">
               <div className="text-7xl mb-2">☀️</div>
-              <div className="text-6xl font-bold">{weatherData?.temperature}°C</div>
+              <div className="text-6xl font-bold">{weatherData?.temperature || 24}°C</div>
               <p className="text-lg opacity-90 mt-2">Partly Cloudy</p>
             </div>
 
@@ -143,7 +152,7 @@ export default function DashboardPage() {
                   <Droplets className="w-5 h-5" />
                   <span className="text-sm">Humidity</span>
                 </div>
-                <p className="text-2xl font-bold">{weatherData?.humidity}%</p>
+                <p className="text-2xl font-bold">{weatherData?.humidity || 68}%</p>
               </div>
 
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
@@ -151,17 +160,19 @@ export default function DashboardPage() {
                   <Wind className="w-5 h-5" />
                   <span className="text-sm">Wind</span>
                 </div>
-                <p className="text-2xl font-bold">{weatherData?.wind_speed} km/h</p>
+                <p className="text-2xl font-bold">{weatherData?.wind_speed || 8} km/h</p>
               </div>
             </div>
           </Card>
 
+          {/* Soil Conditions */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <Leaf className="w-6 h-6 text-green-600" />
               Soil Conditions
             </h2>
 
+            {/* Soil Moisture */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -169,19 +180,20 @@ export default function DashboardPage() {
                   <span className="text-lg font-semibold">Soil Moisture</span>
                 </div>
                 <span className="text-2xl font-bold text-blue-600">
-                  {Math.round(weatherData?.soil_moisture * 100)}%
+                  {Math.round((weatherData?.soil_moisture || 0.28) * 100)}%
                 </span>
               </div>
               <div className="h-6 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-blue-400 to-blue-600"
-                  style={{ width: `${Math.round(weatherData?.soil_moisture * 100)}%` }}
+                  className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                  style={{ width: `${Math.round((weatherData?.soil_moisture || 0.28) * 100)}%` }}
                 />
               </div>
-              <p className="text-sm text-gray-600 mt-2">💧 Optimal for {farmerData?.crop}</p>
+              <p className="text-sm text-gray-600 mt-2">💧 Optimal for {farmerData?.crop || 'crops'}</p>
             </div>
 
-            <div>
+            {/* Temperature */}
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Thermometer className="w-8 h-8 text-orange-500" />
@@ -194,8 +206,24 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm text-gray-600 mt-2">🌡️ Good growing temperature</p>
             </div>
+
+            {/* pH Level */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-lg font-bold text-green-600">pH</span>
+                  </div>
+                  <span className="text-lg font-semibold">Soil pH</span>
+                </div>
+                <span className="text-2xl font-bold text-green-600">6.5</span>
+              </div>
+              <div className="h-6 bg-gradient-to-r from-red-300 via-green-400 to-blue-300 rounded-full" />
+              <p className="text-sm text-gray-600 mt-2">✅ Perfect for vegetables</p>
+            </div>
           </Card>
 
+          {/* 4-Day Forecast */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-xl font-bold mb-4">📅 4-Day Forecast</h2>
             <div className="space-y-3">
@@ -208,15 +236,16 @@ export default function DashboardPage() {
                       <p className="text-sm text-gray-600">{day.rain}% rain</p>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold">{day.temp}°C</div>
+                  <div className="text-2xl font-bold text-gray-900">{day.temp}°C</div>
                 </div>
               ))}
             </div>
           </Card>
         </div>
 
-        {/* CENTER PANEL: Farm */}
+        {/* CENTER PANEL: Farm Overview & Actions */}
         <div className="space-y-6">
+          {/* Farm Stats */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-6">🌾 Your Farm</h2>
             
@@ -224,65 +253,68 @@ export default function DashboardPage() {
               <div className="bg-green-50 rounded-2xl p-4 text-center">
                 <div className="text-4xl mb-2">🧅</div>
                 <p className="text-sm text-gray-600">Crop</p>
-                <p className="text-xl font-bold">{farmerData?.crop}</p>
+                <p className="text-xl font-bold text-gray-900">{farmerData?.crop || 'Onion'}</p>
               </div>
 
               <div className="bg-blue-50 rounded-2xl p-4 text-center">
                 <div className="text-4xl mb-2">📏</div>
                 <p className="text-sm text-gray-600">Farm Size</p>
-                <p className="text-xl font-bold">{farmerData?.farm_size} acres</p>
+                <p className="text-xl font-bold text-gray-900">{farmerData?.farm_size || 2.0} acres</p>
               </div>
 
               <div className="bg-yellow-50 rounded-2xl p-4 text-center">
                 <div className="text-4xl mb-2">🌱</div>
-                <p className="text-sm text-gray-600">Stage</p>
-                <p className="text-xl font-bold">Flowering</p>
+                <p className="text-sm text-gray-600">Growth Stage</p>
+                <p className="text-xl font-bold text-gray-900">Flowering</p>
               </div>
 
               <div className="bg-purple-50 rounded-2xl p-4 text-center">
                 <div className="text-4xl mb-2">📅</div>
                 <p className="text-sm text-gray-600">Harvest In</p>
-                <p className="text-xl font-bold">45 days</p>
+                <p className="text-xl font-bold text-gray-900">45 days</p>
               </div>
             </div>
 
+            {/* Expected Yield */}
             <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-6 border-2 border-green-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Expected Harvest</p>
                   <p className="text-4xl font-bold text-green-700">1.8 tonnes</p>
-                  <p className="text-sm text-gray-600 mt-1">🛰️ NASA prediction</p>
+                  <p className="text-sm text-gray-600 mt-1">Based on NASA data</p>
                 </div>
                 <div className="text-6xl">🌾</div>
               </div>
             </div>
           </Card>
 
+          {/* Quick Actions */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">⚡ Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <button className="bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-200 rounded-2xl p-4 transition-all hover:scale-105">
                 <div className="text-4xl mb-2">💧</div>
-                <p className="font-semibold">Water Now</p>
+                <p className="font-semibold text-gray-900">Water Now</p>
               </button>
 
               <button className="bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-200 rounded-2xl p-4 transition-all hover:scale-105">
                 <div className="text-4xl mb-2">🌱</div>
-                <p className="font-semibold">Fertilize</p>
+                <p className="font-semibold text-gray-900">Fertilize</p>
               </button>
 
               <button className="bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 border-2 border-yellow-200 rounded-2xl p-4 transition-all hover:scale-105">
                 <div className="text-4xl mb-2">🐛</div>
-                <p className="font-semibold">Pest Control</p>
+                <p className="font-semibold text-gray-900">Pest Control</p>
               </button>
 
               <button className="bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 rounded-2xl p-4 transition-all hover:scale-105">
                 <div className="text-4xl mb-2">📊</div>
-                <p className="font-semibold">View Report</p>
+                <p className="font-semibold text-gray-900">View Report</p>
               </button>
             </div>
           </Card>
 
+          {/* Alerts */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <AlertCircle className="w-6 h-6 text-orange-500" />
@@ -292,7 +324,7 @@ export default function DashboardPage() {
               <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border-l-4 border-blue-500">
                 <div className="text-2xl">🌧️</div>
                 <div>
-                  <p className="font-semibold text-sm">Rain Tomorrow</p>
+                  <p className="font-semibold text-sm">Rain Expected Tomorrow</p>
                   <p className="text-xs text-gray-600">80% chance - Delay watering</p>
                 </div>
               </div>
@@ -301,7 +333,7 @@ export default function DashboardPage() {
                 <div className="text-2xl">✅</div>
                 <div>
                   <p className="font-semibold text-sm">Soil Moisture Good</p>
-                  <p className="text-xs text-gray-600">No action needed</p>
+                  <p className="text-xs text-gray-600">No action needed today</p>
                 </div>
               </div>
 
@@ -316,8 +348,9 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* RIGHT PANEL: Community */}
+        {/* RIGHT PANEL: Learning & Community */}
         <div className="space-y-6">
+          {/* Farmer Level */}
           <Card className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl shadow-lg p-6 text-white">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <Award className="w-6 h-6" />
@@ -326,8 +359,8 @@ export default function DashboardPage() {
 
             <div className="text-center mb-6">
               <div className="text-8xl mb-4">⭐</div>
-              <h3 className="text-3xl font-bold mb-2">{farmerData?.level} Farmer</h3>
-              <p className="text-lg opacity-90">{farmerData?.points} points</p>
+              <h3 className="text-3xl font-bold mb-2">{farmerData?.level || 'Silver'} Farmer</h3>
+              <p className="text-lg opacity-90">{farmerData?.points || 85} points</p>
             </div>
 
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
@@ -339,6 +372,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
+          {/* Learning Resources */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-blue-600" />
@@ -381,6 +415,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
+          {/* Community */}
           <Card className="bg-white rounded-3xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <Users className="w-6 h-6 text-purple-600" />
@@ -398,7 +433,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-600">Machakos • Maize</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700">"Just harvested 2.5 tonnes!"</p>
+                <p className="text-sm text-gray-700">"Just harvested 2.5 tonnes! The NASA data really helped with timing."</p>
               </div>
 
               <div className="p-4 bg-green-50 rounded-2xl">
@@ -411,7 +446,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-600">Kiambu • Bees</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700">"Got my loan approved! 🎉"</p>
+                <p className="text-sm text-gray-700">"Got my loan approved in 2 hours! 🎉"</p>
               </div>
             </div>
 
@@ -420,6 +455,7 @@ export default function DashboardPage() {
             </Button>
           </Card>
 
+          {/* Tips */}
           <Card className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl shadow-lg p-6 text-white">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <Lightbulb className="w-6 h-6" />
@@ -428,7 +464,7 @@ export default function DashboardPage() {
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
               <p className="text-lg font-semibold mb-2">🌧️ Rain Tomorrow!</p>
               <p className="text-sm opacity-90">
-                Skip watering today. Your soil moisture is good at 28%.
+                Skip watering today. Let nature do the work and save water. Your soil moisture is already good at 28%.
               </p>
             </div>
           </Card>

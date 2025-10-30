@@ -17,32 +17,21 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors">
-              Features
+            <a href="#farm-data" className="text-sm font-medium hover:text-primary transition-colors">
+              Farm Data
             </a>
-            <a href="#how-it-works" className="text-sm font-medium hover:text-primary transition-colors">
-              How It Works
+            <a href="#credit-scoring" className="text-sm font-medium hover:text-primary transition-colors">
+              Credit Scoring
             </a>
-            <a href="#data" className="text-sm font-medium hover:text-primary transition-colors">
-              NASA Data
+            <a href="#rewards" className="text-sm font-medium hover:text-primary transition-colors">
+              Rewards
             </a>
-            <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
-              About
-            </Link>
-            <Link href="/contact" className="text-sm font-medium hover:text-primary transition-colors">
-              Contact
-            </Link>
           </nav>
 
           {/* CTA */}
           <div className="flex items-center gap-3">
-            <Link href="/signin">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button size="sm">Get Started</Button>
+            <Link href="/credit">
+              <Button>Enter</Button>
             </Link>
           </div>
         </div>

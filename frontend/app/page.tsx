@@ -1,24 +1,20 @@
 import { Header } from "@/components/landing/header"
 import { HeroSection } from "@/components/landing/hero-section"
-import { FeaturesSection } from "@/components/landing/features-section"
-import { HowItWorksSection } from "@/components/landing/how-it-works-section"
-import { DataShowcaseSection } from "@/components/landing/data-showcase-section"
-import { MpesaIntegrationSection } from "@/components/landing/mpesa-integration-section"
-import { CommunityFeaturesSection } from "@/components/landing/community-features-section"
+import { FarmDataSection } from "@/components/landing/FarmDataSection"
+import { CreditScoringSection } from "@/components/landing/CreditScoringSection"
+import { RewardsSection } from "@/components/landing/RewardsSection"
 import { CTASection } from "@/components/landing/cta-section"
 import { Footer } from "@/components/landing/footer"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       <Header />
-      <main className="pt-16">
+      <main>
         <HeroSection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <DataShowcaseSection />
-        <MpesaIntegrationSection />
-        <CommunityFeaturesSection />
+        <FarmDataSection />
+        <CreditScoringSection />
+        <RewardsSection />
         <CTASection />
       </main>
       <Footer />
