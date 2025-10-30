@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "MavunoAI - Smart Farming Platform",
   "scripts": {
-    "build": "cd frontend && npm run build",
-    "dev": "cd frontend && npm run dev",
-    "start": "cd frontend && npm run start",
-    "install": "cd frontend && npm install"
+    "build": "npm run build --workspace frontend",
+    "dev": "npm run dev --workspace frontend",
+    "start": "npm run start --workspace frontend"
   },
   "workspaces": [
     "frontend"
