@@ -9,7 +9,7 @@ type TypingPhase = "typing" | "pausing" | "deleting" | "done";
 
 const HERO_MESSAGES = [
   "The Future of Farming is Here.",
-  "No data, No score, No trust",
+  "Shamba Linaongea...",
 ];
 
 const TYPING_INTERVAL = 70;

@@ -361,7 +361,7 @@ def handle_ussd_flow(session, user_input, phone_number):
                     print(f"[USSD-ANALYSIS] Failed to SMS summary: {exc}")
             return result
         else:
-            return "CON Almost done! Press 1 to reveal your AI insights."
+            return "CON Shamba limeongea! Press 1 to reveal your AI insights."
 
     elif stage == 'update_farm':
         if user_input == '0':
@@ -566,7 +566,7 @@ def handle_credit_score(session, phone_number, is_new=False):
         "Evaluating farm yield potential 🌾"
     ]
 
-    suspense_screen = "CON 🔄 Step 3: AI is working...\n"
+    suspense_screen = "CON 🔄 Step 3: Shamba limeongea...\n"
     suspense_screen += "━━━━━━━━━━━━━━━━━━━━\n\n"
     suspense_screen += "\n".join(f"• {line}" for line in suspense_lines)
     suspense_screen += "\n\nPress 1 to reveal your results."
@@ -613,7 +613,7 @@ def generate_mock_credit_score(user, is_new=False):
     
     mpesa_label, deposits, merchant, withdrawals = mpesa_activity
 
-    header = "🎉 Welcome to MavunoAI!" if is_new else "💳 Credit insights ready"
+    header = "🎉 Welcome to Mavuno!" if is_new else "💳 Credit insights ready"
     points_awarded = 10 if is_new else 0
 
     final_msg = "END ✅ Analysis complete!\n"
