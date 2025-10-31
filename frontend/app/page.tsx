@@ -1,5 +1,6 @@
 import { Header } from "@/components/landing/header"
 import { HeroSection } from "@/components/landing/hero-section"
+import MpesaHighlight from "@/components/landing/mpesa-highlight"
 import { FarmDataSection } from "@/components/landing/FarmDataSection"
 import { CreditScoringSection } from "@/components/landing/CreditScoringSection"
 import { RewardsSection } from "@/components/landing/RewardsSection"
@@ -12,6 +13,7 @@ export default function LandingPage() {
       <Header />
       <main>
         <HeroSection />
+        <MpesaHighlight />
         <FarmDataSection />
         <CreditScoringSection />
         <RewardsSection />

@@ -81,14 +81,6 @@ export function HeroSection() {
           <p className="mt-4 text-lg text-gray-600 max-w-xl">
             MavunoAI uses satellite data to give you a credit score, unlock loans, and provide insights to increase your harvest. All on your phone.
           </p>
-          <div className="mt-6 p-5 rounded-2xl border border-emerald-200 bg-emerald-50 text-gray-700 max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-              Optional M-Pesa Upload: Boosting accuracy without blocking onboarding.
-            </p>
-            <p className="mt-2 text-sm md:text-base">
-              We run a base credit model using satellite and engagement features for frictionless onboarding; users who consent to upload M-Pesa receive a boosted score via an MPesa-feature model. MPesa is a predictive booster, not a gate. All uploads are consented, redacted, and used only to improve scoring.
-            </p>
-          </div>
           <Link href="/join" className="mt-8">
             <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl transition-shadow">
               Start with us
