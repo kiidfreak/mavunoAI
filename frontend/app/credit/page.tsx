@@ -91,7 +91,7 @@ export default function FarmerDashboard() {
       '+254712345678': { name: 'Mary Wanjiru', location: 'Nakuru', size_acres: 2.0, crop: 'Onions' },
       '+254723456789': { name: 'John Kamau', location: 'Machakos', size_acres: 1.5, crop: 'Maize' },
       '+254734567890': { name: 'Grace Njeri', location: 'Kiambu', size_acres: 1.2, crop: 'Bees (Honey)' },
-      '+254115568694': { name: 'Alex Doe', location: 'Loresho KARLO', size_acres: 1.8, crop: 'Beans' },
+      '+254115568694': { name: 'Mwangi Doe', location: 'Loresho KARLO', size_acres: 1.8, crop: 'Beans' },
       [DEFAULT_FARMER_PHONE]: { name: DEFAULT_FARMER_NAME, location: 'Gatundu, Kiambu', size_acres: 1.6, crop: 'Maize' },
     };
 
