@@ -1,10 +1,68 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button"
 import { Satellite, Droplets, Leaf, Star } from "lucide-react"
 import Link from "next/link"
 
+type TypingPhase = "typing" | "pausing" | "deleting" | "done";
+
+const HERO_MESSAGES = [
+  "The Future of Farming is Here.",
+  "No data, No score, No trust",
+];
+
+const TYPING_INTERVAL = 70;
+const DELETING_INTERVAL = 45;
+const HOLD_BEFORE_DELETE = 1000;
+
 export function HeroSection() {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [phase, setPhase] = useState<TypingPhase>("typing");
+  const [displayText, setDisplayText] = useState("");
+
+  useEffect(() => {
+    const currentMessage = HERO_MESSAGES[messageIndex];
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    if (phase === "typing") {
+      if (displayText.length < currentMessage.length) {
+        timeoutId = setTimeout(() => {
+          setDisplayText(currentMessage.slice(0, displayText.length + 1));
+        }, TYPING_INTERVAL);
+      } else {
+        timeoutId = setTimeout(() => {
+          if (messageIndex === HERO_MESSAGES.length - 1) {
+            setPhase("done");
+          } else {
+            setPhase("pausing");
+          }
+        }, HOLD_BEFORE_DELETE);
+      }
+    } else if (phase === "pausing") {
+      timeoutId = setTimeout(() => {
+        setPhase("deleting");
+      }, HOLD_BEFORE_DELETE);
+    } else if (phase === "deleting") {
+      if (displayText.length > 0) {
+        timeoutId = setTimeout(() => {
+          setDisplayText(currentMessage.slice(0, displayText.length - 1));
+        }, DELETING_INTERVAL);
+      } else {
+        timeoutId = setTimeout(() => {
+          setMessageIndex((prev) => Math.min(prev + 1, HERO_MESSAGES.length - 1));
+          setPhase("typing");
+        }, TYPING_INTERVAL);
+      }
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [displayText, messageIndex, phase]);
+
   return (
     <section className="relative bg-white">
       <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center min-h-screen pt-24 pb-12">
@@ -14,12 +72,23 @@ export function HeroSection() {
             <Satellite className="w-4 h-4" />
             <span>Powered by NASA Satellite Data</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tighter text-gray-900 leading-tight">
-            The Future of Farming is Here.
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tighter text-gray-900 leading-tight h-28">
+            <span aria-live="polite" className="whitespace-pre">{displayText}</span>
+            {phase !== "done" && (
+              <span className="ml-1 inline-block w-0.5 h-10 align-middle bg-gray-900 animate-pulse" aria-hidden="true" />
+            )}
           </h1>
           <p className="mt-4 text-lg text-gray-600 max-w-xl">
             MavunoAI uses satellite data to give you a credit score, unlock loans, and provide insights to increase your harvest. All on your phone.
           </p>
+          <div className="mt-6 p-5 rounded-2xl border border-emerald-200 bg-emerald-50 text-gray-700 max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
+              Optional M-Pesa Upload: Boosting accuracy without blocking onboarding.
+            </p>
+            <p className="mt-2 text-sm md:text-base">
+              We run a base credit model using satellite and engagement features for frictionless onboarding; users who consent to upload M-Pesa receive a boosted score via an MPesa-feature model. MPesa is a predictive booster, not a gate. All uploads are consented, redacted, and used only to improve scoring.
+            </p>
+          </div>
           <Link href="/join" className="mt-8">
             <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl transition-shadow">
               Start with us

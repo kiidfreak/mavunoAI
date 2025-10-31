@@ -39,6 +39,7 @@ user_database = {
         'latitude': -0.34,
         'longitude': 36.12,
         'crop': 'onion',
+        'crop_display': 'Onions',
         'farm_size': 2.0,
         'verified': True,
         'points': 120
@@ -49,6 +50,7 @@ user_database = {
         'latitude': -1.52,
         'longitude': 37.26,
         'crop': 'maize',
+        'crop_display': 'Maize',
         'farm_size': 1.5,
         'verified': True,
         'points': 95
@@ -59,6 +61,7 @@ user_database = {
         'latitude': -1.17,
         'longitude': 36.83,
         'crop': 'bees',
+        'crop_display': 'Bees (Honey)',
         'farm_size': 0.5,
         'verified': True,
         'points': 140
@@ -76,6 +79,47 @@ COUNTY_COORDS = {
 }
 
 CROP_OPTIONS = ['onion', 'maize', 'bees', 'beans', 'tomato']
+CROP_SYNONYMS = {
+    'onion': 'onion',
+    'onions': 'onion',
+    'maize': 'maize',
+    'corn': 'maize',
+    'bees': 'bees',
+    'bee': 'bees',
+    'honey': 'bees',
+    'honey bees': 'bees',
+    'beans': 'beans',
+    'bean': 'beans',
+    'tomato': 'tomato',
+    'tomatoes': 'tomato',
+}
+CROP_DISPLAY_LABELS = {
+    'onion': 'Onions',
+    'maize': 'Maize',
+    'bees': 'Bees (Honey)',
+    'beans': 'Beans',
+    'tomato': 'Tomatoes',
+}
+CROP_EXAMPLE_STRING = ", ".join(
+    CROP_DISPLAY_LABELS.get(option, option.title()) for option in CROP_OPTIONS
+)
+
+
+def normalize_crop_name(raw_crop: str) -> str:
+    """Normalize crop input to a canonical lowercase value."""
+    cleaned = (raw_crop or "").strip().lower()
+    return CROP_SYNONYMS.get(cleaned, cleaned)
+
+
+def get_crop_display(normalized_crop: str, original_input: str) -> str:
+    """Return a friendly crop label for UI purposes."""
+    if not normalized_crop:
+        cleaned = (original_input or "").strip()
+        return cleaned.title() if cleaned else "Mixed Crops"
+    if normalized_crop in CROP_DISPLAY_LABELS:
+        return CROP_DISPLAY_LABELS[normalized_crop]
+    cleaned = (original_input or "").strip()
+    return cleaned.title() if cleaned else normalized_crop.title()
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +127,7 @@ CROP_OPTIONS = ['onion', 'maize', 'bees', 'beans', 'tomato']
 # ---------------------------------------------------------------------------
 
 def is_sms_configured() -> bool:
-    return bool(AT_API_KEY and AT_API_KEY.lower() != 'your_api_key_here')
+    return bool(AT_API_KEY and AT_API_KEY != 'your_api_key_here')
 
 
 def send_sms(phone_number: str, message: str, tag: str = 'generic') -> Dict[str, Any]:
@@ -109,8 +153,10 @@ def send_sms(phone_number: str, message: str, tag: str = 'generic') -> Dict[str,
         'username': AT_USERNAME,
         'to': phone_number if phone_number.startswith('+') else f'+{phone_number}',
         'message': message,
-        'from': AT_SENDER_ID
     }
+
+    if AT_SENDER_ID:
+        data['from'] = AT_SENDER_ID
 
     try:
         response = requests.post(AT_SMS_URL, headers=headers, data=data, timeout=10)
@@ -300,9 +346,38 @@ def handle_ussd_flow(session, user_input, phone_number):
     elif stage == 'analysis_wait':
         if user_input == '1':
             session['stage'] = 'main_menu'
-            return session['data'].pop('analysis_result', "END Analysis unavailable. Please try again.")
+            result = session['data'].pop('analysis_result', "END Analysis unavailable. Please try again.")
+            summary = session['data'].pop('analysis_payload', None)
+            if summary and is_sms_configured():
+                try:
+                    lines = [
+                        f"Score {summary.get('score', '0')} ({summary.get('risk', 'N/A')})",
+                        f"Loan: {summary.get('loan_offer', {}).get('amount_ksh', 0):,} KSh @{summary.get('loan_offer', {}).get('rate_percent', 0)}%",
+                        f"M-Pesa: {summary.get('mpesa_activity', {}).get('label', 'Healthy')}",
+                        summary.get('ndvi_status', 'NDVI steady'),
+                    ]
+                    send_sms(phone_number, "\n".join(lines), tag='credit-summary')
+                except Exception as exc:
+                    print(f"[USSD-ANALYSIS] Failed to SMS summary: {exc}")
+            return result
         else:
             return "CON Almost done! Press 1 to reveal your AI insights."
+
+    elif stage == 'update_farm':
+        if user_input == '0':
+            session['stage'] = 'main_menu'
+            return handle_ussd_flow(session, '', phone_number)
+        elif user_input == '1':
+            session['stage'] = 'main_menu'
+            return "END Thanks! Our agronomist will call to help you change your crop details."
+        elif user_input == '2':
+            session['stage'] = 'main_menu'
+            return "END Got it! We'll update your farm size and confirm via SMS."
+        elif user_input == '3':
+            session['stage'] = 'main_menu'
+            return "END Location update received. Expect a follow-up SMS shortly."
+        else:
+            return "CON Update Farm Info\n\n1. Change Crop\n2. Update Farm Size\n3. Update Location\n0. Back"
 
     # Register - Name
     elif stage == 'register_name':
@@ -338,23 +413,48 @@ def handle_ussd_flow(session, user_input, phone_number):
             return "CON Please enter a ward or village name."
 
         session['data']['ward'] = ward
-        session['stage'] = 'register_crop'
-        return "CON Great! What do you farm?\n\n1. Onion\n2. Maize\n3. Bees (Honey)\n4. Beans\n5. Tomato"
-    
-    # Register - Crop Selection
-    elif stage == 'register_crop':
+        session['stage'] = 'register_crop_choice'
+        return (
+            "CON Great! What do you farm?\n\n"
+            "1. Onion\n2. Maize\n3. Bees (Honey)\n4. Beans\n5. Tomato\n"
+            "6. Enter another crop"
+        )
+
+    elif stage == 'register_crop_choice':
+        if user_input == '6':
+            session['stage'] = 'register_crop_manual'
+            return (
+                "CON Enter your primary crop name:\n"
+                f"(e.g., {CROP_EXAMPLE_STRING})"
+            )
+
         try:
             crop_idx = int(user_input) - 1
             if 0 <= crop_idx < len(CROP_OPTIONS):
                 crop = CROP_OPTIONS[crop_idx]
                 session['data']['crop'] = crop
+                session['data']['crop_display'] = get_crop_display(crop, crop)
                 session['stage'] = 'register_farm_size'
                 return "CON Enter your farm size in acres:\n(e.g., 2 for 2 acres)"
             else:
                 return "END Invalid crop. Please try again."
         except:
             return "END Invalid input. Please try again."
-    
+
+    elif stage == 'register_crop_manual':
+        manual_crop = user_input.strip()
+        if len(manual_crop) < 2:
+            return (
+                "CON Please enter a crop name with at least 2 letters.\n"
+                "Try again (e.g., Maize, Onions, Sorghum)"
+            )
+
+        normalized_crop = normalize_crop_name(manual_crop)
+        session['data']['crop'] = normalized_crop
+        session['data']['crop_display'] = get_crop_display(normalized_crop, manual_crop)
+        session['stage'] = 'register_farm_size'
+        return "CON Enter your farm size in acres:\n(e.g., 2 for 2 acres)"
+
     # Register - Farm Size
     elif stage == 'register_farm_size':
         try:
@@ -369,6 +469,10 @@ def handle_ussd_flow(session, user_input, phone_number):
                     'latitude': session['data']['latitude'],
                     'longitude': session['data']['longitude'],
                     'crop': session['data']['crop'],
+                    'crop_display': session['data'].get(
+                        'crop_display',
+                        get_crop_display(session['data'].get('crop'), session['data'].get('crop'))
+                    ),
                     'farm_size': farm_size,
                     'verified': False
                 }
@@ -414,6 +518,10 @@ def handle_credit_score(session, phone_number, is_new=False):
             'latitude': session['data'].get('latitude', -1.29),
             'longitude': session['data'].get('longitude', 36.82),
             'crop': session['data'].get('crop', 'maize'),
+            'crop_display': session['data'].get(
+                'crop_display',
+                get_crop_display(session['data'].get('crop', 'maize'), session['data'].get('crop', 'maize'))
+            ),
             'farm_size': session['data'].get('farm_size', 1.0),
             'verified': False
         }
@@ -421,7 +529,7 @@ def handle_credit_score(session, phone_number, is_new=False):
     user = user_database[phone_number]
     
     # Always use the mock data generator for a consistent and impressive demo
-    final_message, points_awarded = generate_mock_credit_score(user, is_new)
+    final_message, points_awarded, analysis_payload = generate_mock_credit_score(user, is_new)
 
     # Persist rewards
     if phone_number in user_database and points_awarded:
@@ -430,7 +538,27 @@ def handle_credit_score(session, phone_number, is_new=False):
     # Store analysis result for next step
     session['data']['analysis_result'] = final_message
     session['data']['analysis_points'] = points_awarded
+    session['data']['analysis_payload'] = analysis_payload
     session['stage'] = 'analysis_wait'
+
+    # Send analysis snapshot to backend for dashboard & SMS lookups
+    if analysis_payload:
+        payload = {
+            **analysis_payload,
+            'phone_number': phone_number,
+            'points_awarded': points_awarded,
+            'crop': user.get('crop'),
+            'crop_display': user.get('crop_display'),
+        }
+
+        try:
+            requests.post(
+                f"{API_BASE_URL}/api/v1/ussd/analysis",
+                json=payload,
+                timeout=5,
+            )
+        except Exception as exc:
+            print(f"[USSD-ANALYSIS] Failed to sync analysis: {exc}")
 
     suspense_lines = [
         "Analyzing M-Pesa behaviour 📊",
@@ -498,12 +626,47 @@ def generate_mock_credit_score(user, is_new=False):
     final_msg += f"• Cash-outs: {withdrawals}\n"
     final_msg += "Farm health (NDVI): Improving 🌿\n\n"
     final_msg += f"Loan offer: {amount:,} KSh @ {rate}% for 6 months\n"
+
+    points = user.get('points', 0)
+    if score >= 0.8:
+        level = "Gold Farmer"
+        next_step = "Keep up the excellent repayments!"
+    elif score >= 0.65:
+        level = "Silver Farmer"
+        next_step = "Pay your next loan on time to reach Gold."
+    else:
+        level = "Bronze Farmer"
+        next_step = "Complete 2 trainings to unlock Silver."
+
+    final_msg += f"Level: {level} | Points: {points}\n"
+    final_msg += f"Next milestone: {next_step}\n"
     final_msg += "🛰️ Powered by NASA Data\n"
     if points_awarded:
         final_msg += f"🎉 +{points_awarded} points added to your rewards!\n"
     final_msg += f"Dial {AT_SHORT_CODE} anytime."
 
-    return final_msg, points_awarded
+    analysis_payload = {
+        'farmer_name': user.get('name'),
+        'location': user.get('location'),
+        'score': round(score, 2),
+        'risk': risk,
+        'mpesa_activity': {
+            'label': mpesa_label,
+            'deposits_30d': deposits,
+            'merchant_spends': merchant,
+            'cash_outs': withdrawals,
+        },
+        'loan_offer': {
+            'amount_ksh': amount,
+            'rate_percent': rate,
+            'term_months': 6,
+        },
+        'ndvi_status': 'Improving 🌿',
+        'crop': user.get('crop'),
+        'crop_display': user.get('crop_display'),
+    }
+
+    return final_msg, points_awarded, analysis_payload
 
 
 def handle_loan_application(session, phone_number):
@@ -594,6 +757,39 @@ def sms_incoming_message():
             "MavunoAI: your credit score is ready. Dial "
             f"{AT_SHORT_CODE} to see offers."
         )
+
+    needs_score = text in {'score', 'credit score', 'my score'}
+
+    if needs_score:
+        lookup_number = sender[1:] if sender and sender.startswith('+') else sender
+        try:
+            resp = requests.get(
+                f"{API_BASE_URL}/api/v1/ussd/latest",
+                params={'phone_number': lookup_number},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                latest = resp.json()
+                loan = latest.get('loan_offer', {})
+                mpesa = latest.get('mpesa_activity', {})
+                message_parts = [
+                    f"Score {latest.get('score', '0'):.2f} ({latest.get('risk', 'N/A')})",
+                    f"Loan: {loan.get('amount_ksh', 0):,} KSh @{loan.get('rate_percent', 0)}%",
+                    f"M-Pesa: {mpesa.get('label', 'Active')}",
+                    latest.get('ndvi_status', 'NDVI steady'),
+                ]
+                auto_response = "\n".join(message_parts)
+            else:
+                auto_response = (
+                    "MavunoAI: No recent credit session found. "
+                    f"Dial {AT_SHORT_CODE} to run your analysis."
+                )
+        except Exception as exc:
+            print(f"[SMS-INCOMING] Score lookup failed: {exc}")
+            auto_response = (
+                "MavunoAI: Our AI is checking your data. "
+                f"Dial {AT_SHORT_CODE} for instant results."
+            )
 
     if sender and auto_response:
         send_sms(sender, auto_response, tag='auto-reply')

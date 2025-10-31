@@ -40,6 +40,27 @@ pip install -r requirements.txt
 python app.py
 ```
 
+### Running Services
+1. **Start the frontend:**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+2. **Start the backend:**
+   ```bash
+   cd backend
+   python main.py
+   ```
+3. **Start the USSD simulator:**
+   ```bash
+   cd ussd-app
+   python credit_ussd.py
+   ```
+4. **Expose the USSD service via Ngrok:**
+   ```bash
+   ngrok http 5000
+   ```
+
 ## Demo Scenarios
 
 ### Scenario 1: Farmer John (Feature Phone)

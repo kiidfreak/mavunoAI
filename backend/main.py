@@ -14,6 +14,7 @@ import json
 import os
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Import our modules
 from services.weather_service import WeatherService
@@ -62,6 +63,61 @@ carbon_service = CarbonService()
 apiary_service = ApiaryService()
 aflatoxin_service = AflatoxinService()
 credit_service = CreditScoringService()
+
+
+class USSDAnalysisPayload(BaseModel):
+    phone_number: str
+    farmer_name: Optional[str] = None
+    location: Optional[str] = None
+    score: float
+    risk: str
+    mpesa_activity: Dict[str, Any]
+    loan_offer: Dict[str, Any]
+    ndvi_status: Optional[str] = None
+    points_awarded: int = 0
+    crop: Optional[str] = None
+    crop_display: Optional[str] = None
+
+
+latest_credit_analysis: Dict[str, Dict[str, Any]] = {}
+
+
+@app.post("/api/v1/ussd/analysis")
+async def capture_ussd_analysis(payload: USSDAnalysisPayload):
+    """Store latest USSD AI analysis keyed by phone number."""
+    latest_credit_analysis[payload.phone_number] = {
+        "phone_number": payload.phone_number,
+        "farmer_name": payload.farmer_name,
+        "location": payload.location,
+        "score": payload.score,
+        "risk": payload.risk,
+        "mpesa_activity": payload.mpesa_activity,
+        "loan_offer": payload.loan_offer,
+        "ndvi_status": payload.ndvi_status,
+        "points_awarded": payload.points_awarded,
+        "crop": payload.crop,
+        "crop_display": payload.crop_display,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    return {"success": True, "message": "USSD analysis captured."}
+
+
+@app.get("/api/v1/ussd/latest")
+async def get_latest_analysis(phone_number: Optional[str] = None):
+    """Fetch the latest stored USSD credit analysis."""
+    if phone_number:
+        item = latest_credit_analysis.get(phone_number)
+        if not item:
+            raise HTTPException(status_code=404, detail="No analysis found for this number")
+        return item
+
+    if not latest_credit_analysis:
+        raise HTTPException(status_code=404, detail="No analyses recorded yet")
+
+    # Return most recent item by timestamp
+    latest_item = max(latest_credit_analysis.values(), key=lambda x: x.get("timestamp", ""))
+    return latest_item
 
 @app.get("/")
 async def root():

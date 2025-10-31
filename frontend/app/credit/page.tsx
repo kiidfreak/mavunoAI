@@ -24,16 +24,20 @@ import {
   Gift
 } from "lucide-react";
 
+const DEFAULT_FARMER_PHONE = "+254700000000";
+const DEFAULT_FARMER_NAME = "Mwangi Wainaina";
+
 export default function FarmerDashboard() {
   const [creditData, setCreditData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [farmerPhone, setFarmerPhone] = useState("");
   const [language, setLanguage] = useState("english");
   const [savedLocation, setSavedLocation] = useState<string | null>(null);
+  const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
 
   useEffect(() => {
     // Get farmer phone from localStorage
-    const phone = localStorage.getItem('farmerPhone') || '+254712345678';
+    const phone = localStorage.getItem('farmerPhone') || DEFAULT_FARMER_PHONE;
     setFarmerPhone(phone);
 
     const persistedLocation = localStorage.getItem('farmerLocation');
@@ -43,6 +47,7 @@ export default function FarmerDashboard() {
     
     // Fetch dashboard data
     fetchCreditScore(phone);
+    fetchLatestAnalysis(phone);
   }, []);
 
   const fetchCreditScore = async (phone: string) => {
@@ -55,6 +60,9 @@ export default function FarmerDashboard() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     setLoading(false);
+
+    // Refresh latest analysis summary for dashboard widgets
+    fetchLatestAnalysis(phone);
     
     // Optional: Try to fetch from API in the background to keep it warm,
     // but we won't use the result for the main display.
@@ -63,15 +71,31 @@ export default function FarmerDashboard() {
     ).catch(err => console.log("Background API fetch failed, using mock data as intended."));
   };
 
+  const fetchLatestAnalysis = async (phone: string) => {
+    const lookup = phone.startsWith('+') ? phone.substring(1) : phone;
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/v1/ussd/latest?phone_number=${lookup}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setLatestAnalysis(data);
+      }
+    } catch (error) {
+      console.log("Failed to fetch latest USSD analysis", error);
+    }
+  };
+
   const getMockData = (phone: string) => {
     const profiles: Record<string, { name: string; location: string; size_acres: number; crop: string }> = {
       '+254712345678': { name: 'Mary Wanjiru', location: 'Nakuru', size_acres: 2.0, crop: 'Onions' },
       '+254723456789': { name: 'John Kamau', location: 'Machakos', size_acres: 1.5, crop: 'Maize' },
       '+254734567890': { name: 'Grace Njeri', location: 'Kiambu', size_acres: 1.2, crop: 'Bees (Honey)' },
       '+254115568694': { name: 'Alex Doe', location: 'Loresho KARLO', size_acres: 1.8, crop: 'Beans' },
+      [DEFAULT_FARMER_PHONE]: { name: DEFAULT_FARMER_NAME, location: 'Gatundu, Kiambu', size_acres: 1.6, crop: 'Maize' },
     };
 
-    const profile = profiles[phone] || profiles['+254712345678'];
+    const profile = profiles[phone] || profiles[DEFAULT_FARMER_PHONE];
     const agrovetPartner = `Mavuno ${profile.location} Agrovet`;
 
     return {
@@ -140,11 +164,14 @@ export default function FarmerDashboard() {
   const scorePercent = Math.round(score * 100);
   const isApproved = creditData?.loan_offer?.approved;
   const farmProfileLocation = creditData?.farm?.location || creditData?.user?.location;
-  const rawLocation = savedLocation || farmProfileLocation || "Your County";
+  const locationFromAnalysis = latestAnalysis?.location;
+  const rawLocation = savedLocation || locationFromAnalysis || farmProfileLocation || "Your County";
   const formattedLocation = toTitleCase(rawLocation) || "Your County";
   const agrovetPartner = `Mavuno ${formattedLocation} Agrovet`;
   const farmSize = creditData?.farm?.size_acres;
-  const farmCrop = creditData?.farm?.crop;
+  const cropDisplay = latestAnalysis?.crop_display || creditData?.farm?.crop;
+  const displayName = latestAnalysis?.farmer_name || creditData?.user?.name || DEFAULT_FARMER_NAME;
+  const shortName = displayName.split(' ')[0] || displayName;
 
   const progressMilestones = [
     {
@@ -153,6 +180,9 @@ export default function FarmerDashboard() {
       total: 15,
       barColor: "bg-green-500",
       accent: "text-green-600",
+      footer: latestAnalysis
+        ? `Last score ${latestAnalysis.score?.toFixed?.(2) ?? latestAnalysis.score} (${latestAnalysis.risk}) • ${latestAnalysis.timestamp ? new Date(latestAnalysis.timestamp).toLocaleTimeString() : "just now"}`
+        : "Run a fresh USSD session to update your score.",
     },
     {
       title: "Training Sessions",
@@ -187,7 +217,7 @@ export default function FarmerDashboard() {
                 <Sprout className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Welcome, {creditData?.user?.name?.split(' ')[0] || 'Farmer'}!</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Welcome, {shortName || 'Farmer'}!</h1>
                 <p className="text-gray-600 flex items-center gap-2">
                   {new Date().getHours() < 18 ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-gray-500" />}
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -320,7 +350,7 @@ export default function FarmerDashboard() {
                     {creditData?.yield_estimate?.tonnes || 1.8} tonnes
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Based on {farmSize || 'your'} acres of {farmCrop || 'mixed crops'}
+                    Based on {farmSize || 'your'} acres of {cropDisplay || 'mixed crops'}
                   </p>
                 </div>
                 <div className="text-5xl">🌾</div>
@@ -482,6 +512,9 @@ export default function FarmerDashboard() {
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
+                    {milestone.footer && (
+                      <p className="text-xs text-gray-500">{milestone.footer}</p>
+                    )}
                     {isComplete && milestone.reward && (
                       <div className="flex items-start gap-3 bg-purple-50 border border-purple-100 rounded-2xl px-3 py-3 text-xs text-gray-700">
                         <div className="mt-1">
