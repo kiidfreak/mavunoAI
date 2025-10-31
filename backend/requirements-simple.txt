@@ -1,0 +1,7 @@
+# Ultra-minimal for Python 3.13 - use latest versions with pre-built wheels
+fastapi
+uvicorn[standard]
+httpx
+requests
+python-dotenv
+sqlalchemy

@@ -1,0 +1,41 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.13.1
+# psycopg2-binary==2.9.9  # Commented out - not needed for SQLite
+# geoalchemy2==0.14.2  # Commented out - not needed for basic operation
+
+# Caching (optional)
+# redis==5.0.1  # Commented out - not needed for basic operation
+
+# HTTP Clients
+httpx==0.25.2
+requests==2.31.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.25.2
+# geopandas==0.14.1  # Commented out - requires complex dependencies
+# xarray==2023.12.0  # Commented out - not needed for basic operation
+# rasterio==1.3.9  # Commented out - requires GDAL
+
+# Machine Learning
+scikit-learn==1.3.2
+# prophet==1.1.4  # Commented out - requires complex dependencies
+
+# Geospatial (simplified)
+shapely==2.0.2
+# folium==0.15.1  # Commented out - not needed for API
+
+# Environment
+python-dotenv==1.0.0
+
+# Development
+pytest==7.4.3
+black==23.11.0
+pylint==3.0.3

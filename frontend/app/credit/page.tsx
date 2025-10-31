@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Droplets, 
   Cloud, 
@@ -23,17 +24,24 @@ import {
   Gift
 } from "lucide-react";
 
-export default function CreditDashboard() {
+export default function FarmerDashboard() {
   const [creditData, setCreditData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [farmerPhone, setFarmerPhone] = useState("");
+  const [language, setLanguage] = useState("english");
+  const [savedLocation, setSavedLocation] = useState<string | null>(null);
 
   useEffect(() => {
     // Get farmer phone from localStorage
     const phone = localStorage.getItem('farmerPhone') || '+254712345678';
     setFarmerPhone(phone);
+
+    const persistedLocation = localStorage.getItem('farmerLocation');
+    if (persistedLocation) {
+      setSavedLocation(persistedLocation);
+    }
     
-    // Fetch credit score
+    // Fetch dashboard data
     fetchCreditScore(phone);
   }, []);
 
@@ -55,38 +63,57 @@ export default function CreditDashboard() {
     ).catch(err => console.log("Background API fetch failed, using mock data as intended."));
   };
 
-  const getMockData = (phone: string) => ({
-    user: {
-      name: phone === '+254115568694' ? 'Alex Doe' : 'Mary Wanjiru',
-    },
-    credit: {
-      score: 0.82,
-      risk_level: "Low Risk",
-      top_factors: [
-        { name: "NDVI Trend", impact: 0.12 },
-        { name: "M-Pesa Activity", impact: 0.08 },
-        { name: "Soil Moisture", impact: 0.06 }
-      ]
-    },
-    satellite_insights: {
-      soil_moisture: 0.28,
-      rainfall_30d: 145,
-      ndvi_mean: 0.62,
-      ndvi_trend: "↑ Healthy",
-      drought_risk: "Low"
-    },
-    loan_offer: {
-      approved: true,
-      amount_ksh: 50000,
-      interest_rate: 8.0,
-      term_months: 6,
-      monthly_payment: 8800
-    },
-    yield_estimate: {
-      tonnes: 1.8,
-      confidence: "85%"
-    }
-  });
+  const getMockData = (phone: string) => {
+    const profiles: Record<string, { name: string; location: string; size_acres: number; crop: string }> = {
+      '+254712345678': { name: 'Mary Wanjiru', location: 'Nakuru', size_acres: 2.0, crop: 'Onions' },
+      '+254723456789': { name: 'John Kamau', location: 'Machakos', size_acres: 1.5, crop: 'Maize' },
+      '+254734567890': { name: 'Grace Njeri', location: 'Kiambu', size_acres: 1.2, crop: 'Bees (Honey)' },
+      '+254115568694': { name: 'Alex Doe', location: 'Loresho KARLO', size_acres: 1.8, crop: 'Beans' },
+    };
+
+    const profile = profiles[phone] || profiles['+254712345678'];
+    const agrovetPartner = `Mavuno ${profile.location} Agrovet`;
+
+    return {
+      user: {
+        name: profile.name,
+        location: profile.location,
+        agrovetPartner,
+      },
+      farm: {
+        location: profile.location,
+        size_acres: profile.size_acres,
+        crop: profile.crop,
+      },
+      credit: {
+        score: 0.82,
+        risk_level: "Low Risk",
+        top_factors: [
+          { name: "NDVI Trend", impact: 0.12 },
+          { name: "M-Pesa Activity", impact: 0.08 },
+          { name: "Soil Moisture", impact: 0.06 }
+        ]
+      },
+      satellite_insights: {
+        soil_moisture: 0.28,
+        rainfall_30d: 145,
+        ndvi_mean: 0.62,
+        ndvi_trend: "↑ Healthy",
+        drought_risk: "Low"
+      },
+      loan_offer: {
+        approved: true,
+        amount_ksh: 50000,
+        interest_rate: 8.0,
+        term_months: 6,
+        monthly_payment: 8800
+      },
+      yield_estimate: {
+        tonnes: 1.8,
+        confidence: "85%"
+      }
+    };
+  };
 
   if (loading) {
     return (
@@ -100,9 +127,24 @@ export default function CreditDashboard() {
   }
 
 
+  const toTitleCase = (value?: string | null) => {
+    if (!value) return undefined;
+    return value
+      .toLowerCase()
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   const score = creditData?.credit?.score || 0;
   const scorePercent = Math.round(score * 100);
   const isApproved = creditData?.loan_offer?.approved;
+  const farmProfileLocation = creditData?.farm?.location || creditData?.user?.location;
+  const rawLocation = savedLocation || farmProfileLocation || "Your County";
+  const formattedLocation = toTitleCase(rawLocation) || "Your County";
+  const agrovetPartner = `Mavuno ${formattedLocation} Agrovet`;
+  const farmSize = creditData?.farm?.size_acres;
+  const farmCrop = creditData?.farm?.crop;
 
   const progressMilestones = [
     {
@@ -128,7 +170,7 @@ export default function CreditDashboard() {
       reward: {
         headline: "Well done! You're eligible for a reward.",
         couponCode: "FARM50",
-        partner: "Mavuno Input Hub",
+        partner: agrovetPartner,
         callout: "Show the code at checkout to redeem a KSh 1,000 fertilizer voucher.",
       },
     },
@@ -152,14 +194,32 @@ export default function CreditDashboard() {
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={() => fetchCreditScore(farmerPhone)}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 text-base rounded-xl flex items-center gap-2 transition-transform duration-200 hover:scale-105"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Refreshing...' : 'Refresh Score'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <ToggleGroup
+                type="single"
+                value={language}
+                onValueChange={(value) => value && setLanguage(value)}
+                className="bg-gray-100 rounded-xl p-1 text-sm"
+              >
+                <ToggleGroupItem value="english" className="px-3 py-1 rounded-lg data-[state=on]:bg-green-600 data-[state=on]:text-white">
+                  English
+                </ToggleGroupItem>
+                <ToggleGroupItem value="swahili" className="px-3 py-1 rounded-lg data-[state=on]:bg-green-600 data-[state=on]:text-white">
+                  Kiswahili
+                </ToggleGroupItem>
+                <ToggleGroupItem value="kikuyu" className="px-3 py-1 rounded-lg data-[state=on]:bg-green-600 data-[state=on]:text-white">
+                  Kikuyu
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <Button 
+                onClick={() => fetchCreditScore(farmerPhone)}
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 text-base rounded-xl flex items-center gap-2 transition-transform duration-200 hover:scale-105"
+                disabled={loading}
+              >
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Refreshing...' : 'Refresh Score'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -172,6 +232,20 @@ export default function CreditDashboard() {
               <Leaf className="w-6 h-6 text-green-600" />
               Your Farm
             </h2>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium text-green-700 bg-green-100/60 border border-green-200 rounded-full">
+                <MapPin className="w-4 h-4" />
+                <span>{formattedLocation}</span>
+              </div>
+              {farmSize && (
+                <Button variant="outline" size="sm" className="rounded-full border-green-200 text-green-700 bg-white">
+                  Farm Size: {farmSize} acres
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-6">
+              Tip: include your ward & village for the most precise satellite insights on your farm.
+            </p>
 
             {/* Soil Moisture - Visual Bar */}
             <div className="mb-6">
@@ -244,6 +318,9 @@ export default function CreditDashboard() {
                   <p className="text-sm text-gray-600">Expected Harvest</p>
                   <p className="text-3xl font-bold text-green-700">
                     {creditData?.yield_estimate?.tonnes || 1.8} tonnes
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Based on {farmSize || 'your'} acres of {farmCrop || 'mixed crops'}
                   </p>
                 </div>
                 <div className="text-5xl">🌾</div>

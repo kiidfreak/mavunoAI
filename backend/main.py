@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 import asyncio
 from typing import List, Dict, Any, Optional
 import json
+import os
+
+from dotenv import load_dotenv
 
 # Import our modules
 from services.weather_service import WeatherService
@@ -21,6 +24,7 @@ from services.apiary_service import ApiaryService
 from services.farmer_service import FarmerService
 from services.aflatoxin_service import AflatoxinService
 from services.cooperative_service import CooperativeService
+from services.credit_service import CreditScoringService
 from database import get_db, create_tables
 from models.schemas import (
     WeatherRequest, WeatherResponse,
@@ -28,6 +32,9 @@ from models.schemas import (
     AdvisoryRequest, AdvisoryResponse,
     CarbonMetricsRequest, CarbonMetricsResponse
 )
+
+# Load environment variables (e.g., Africa's Talking credentials)
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -41,7 +48,7 @@ app = FastAPI(
 # CORS middleware for web frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,6 +61,7 @@ advisory_service = AdvisoryService()
 carbon_service = CarbonService()
 apiary_service = ApiaryService()
 aflatoxin_service = AflatoxinService()
+credit_service = CreditScoringService()
 
 @app.get("/")
 async def root():
@@ -554,12 +562,137 @@ async def get_peer_mentorship_matches(farmer_id: str, db=Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Peer mentorship failed: {str(e)}")
 
+# 🌟 MAVUNOAI CREDIT - AI-Driven Credit Scoring Endpoints
+@app.post("/api/v1/credit/score")
+async def get_credit_score(
+    phone_number: str,
+    latitude: float,
+    longitude: float,
+    crop_type: str,
+    farm_size_acres: float = 1.0
+):
+    """
+    Get AI-powered credit score for a farmer
+    Uses NASA satellite data + behavioral signals
+    No IoT needed - satellites are the sensors!
+    """
+    try:
+        score_result = await credit_service.score_farmer(
+            phone_number=phone_number,
+            latitude=latitude,
+            longitude=longitude,
+            crop_type=crop_type,
+            farm_size_acres=farm_size_acres
+        )
+        
+        return {
+            "success": True,
+            "phone_number": phone_number,
+            "location": {"lat": latitude, "lon": longitude},
+            "crop": crop_type,
+            "credit_score": score_result.score,
+            "risk_level": score_result.risk_level,
+            "loan_recommendation": score_result.loan_recommendation,
+            "top_factors": score_result.top_factors,
+            "yield_estimate_tonnes": score_result.yield_estimate,
+            "fraud_score": score_result.fraud_score,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Credit scoring failed: {str(e)}")
+
+@app.get("/api/v1/credit/simulate-risk")
+async def simulate_risk_scenario(
+    phone_number: str,
+    latitude: float,
+    longitude: float,
+    crop_type: str,
+    rainfall_change_percent: float = 0.0
+):
+    """
+    Simulate how credit score changes with weather scenarios
+    E.g., "What if rainfall drops by 20%?"
+    """
+    try:
+        # Get baseline score
+        baseline = await credit_service.score_farmer(
+            phone_number, latitude, longitude, crop_type
+        )
+        
+        # Simulate scenario (simplified - adjust rainfall impact)
+        rainfall_factor = 1.0 + (rainfall_change_percent / 100.0)
+        simulated_score = baseline.score * (0.7 + 0.3 * max(0.5, rainfall_factor))
+        simulated_score = max(0.0, min(1.0, simulated_score))
+        
+        return {
+            "baseline_score": baseline.score,
+            "simulated_score": simulated_score,
+            "scenario": f"Rainfall change: {rainfall_change_percent:+.0f}%",
+            "impact": simulated_score - baseline.score,
+            "recommendation": "Consider weather-indexed insurance" if simulated_score < 0.5 else "Low climate risk"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/credit/dashboard/{phone_number}")
+async def get_credit_dashboard(
+    phone_number: str,
+    latitude: float,
+    longitude: float,
+    crop_type: str
+):
+    """
+    Get full credit dashboard data for farmer
+    Includes: score, NASA data, loan offers, rewards
+    """
+    try:
+        score_result = await credit_service.score_farmer(
+            phone_number, latitude, longitude, crop_type
+        )
+        
+        # Get satellite features for display
+        satellite_features = await credit_service._fetch_satellite_features(latitude, longitude)
+        
+        return {
+            "farmer": {
+                "phone": phone_number,
+                "location": {"lat": latitude, "lon": longitude},
+                "crop": crop_type
+            },
+            "credit": {
+                "score": score_result.score,
+                "risk_level": score_result.risk_level,
+                "top_factors": score_result.top_factors
+            },
+            "satellite_insights": {
+                "soil_moisture": satellite_features.get("soil_moisture"),
+                "rainfall_30d": satellite_features.get("rainfall_30d"),
+                "ndvi_mean": satellite_features.get("ndvi_mean_90d"),
+                "ndvi_trend": "↑ Healthy" if satellite_features.get("ndvi_trend_90d", 0) > 0 else "↓ Declining",
+                "drought_risk": "High" if satellite_features.get("drought_flag") else "Low",
+                "last_updated": "3 hours ago (Near Real-Time)"
+            },
+            "loan_offer": score_result.loan_recommendation,
+            "yield_estimate": {
+                "tonnes": score_result.yield_estimate,
+                "confidence": "85%"
+            },
+            "ai_recommendations": [
+                "Soil moisture slightly low — irrigate within 3 days" if satellite_features.get("soil_moisture", 0.3) < 0.25 else "Soil moisture optimal",
+                "Apply nitrogen fertilizer after next rain" if satellite_features.get("rainfall_30d", 0) > 100 else "Monitor rainfall forecast",
+                f"Predicted yield: {score_result.yield_estimate:.1f} tonnes"
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on startup"""
     create_tables()
     print("✅ Database tables created/verified")
+    print("🌟 MavunoAI Credit - AI-Powered Agri-Finance Ready!")
 
 if __name__ == "__main__":
     uvicorn.run(

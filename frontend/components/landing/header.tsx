@@ -30,8 +30,8 @@ export function Header() {
 
           {/* CTA */}
           <div className="flex items-center gap-3">
-            <Link href="/credit">
-              <Button>Enter</Button>
+            <Link href="/join">
+              <Button>Enter Dashboard</Button>
             </Link>
           </div>
         </div>

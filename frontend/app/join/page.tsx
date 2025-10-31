@@ -28,35 +28,65 @@ export default function JoinPage() {
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [manualLocation, setManualLocation] = useState('');
+  const [manualLocationError, setManualLocationError] = useState('');
   const router = useRouter();
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const sanitizedPhone = phone.trim();
+    if (!sanitizedPhone) {
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call to check/create user
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    localStorage.setItem('farmerPhone', phone);
-    // In a real app, you'd get a response and maybe show a message
-    // alert('New account created!');
-    setIsLoading(false);
-    setStep(2);
+
+    try {
+      localStorage.setItem('farmerPhone', sanitizedPhone);
+      localStorage.setItem('farmerProfile', JSON.stringify({ phone: sanitizedPhone }));
+      setStep(2);
+
+      // Simulate API call to check/create user (keep short for UX)
+      await new Promise(resolve => setTimeout(resolve, 400));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleLocationSubmit = async () => {
-    setIsLoading(true);
-    // Simulate getting location and saving it
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    // For demo, we assume location is fetched and stored
-    router.push('/credit');
+  const saveLocationAndContinue = async (locationLabel: string) => {
+    try {
+      const profileRaw = localStorage.getItem('farmerProfile');
+      const profile = profileRaw ? JSON.parse(profileRaw) : {};
+      const updatedProfile = { ...profile, location: locationLabel };
+      localStorage.setItem('farmerProfile', JSON.stringify(updatedProfile));
+      localStorage.setItem('farmerLocation', locationLabel);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      router.push('/credit');
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
+
+  const handleManualLocationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = manualLocation.trim();
+
+    if (!trimmed) {
+      setManualLocationError('Please enter your farm location.');
+      return;
+    }
+
+    setManualLocationError('');
+    setIsLoading(true);
+    await saveLocationAndContinue(trimmed);
+  };
+
   const handleAutoLocation = () => {
     setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // In a real app, you'd save these coords
-        console.log(position.coords.latitude, position.coords.longitude);
-        handleLocationSubmit();
+        const coords = `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
+        saveLocationAndContinue(`GPS (${coords})`);
       },
       (error) => {
         console.error("Error getting location: ", error);
@@ -101,12 +131,31 @@ export default function JoinPage() {
             <div>
               <h2 className="text-xl font-semibold mb-1">What's Your Farm's Location?</h2>
               <p className="text-gray-500 mb-6">This helps us get accurate satellite data.</p>
+              <div className="rounded-xl border border-dashed border-green-300 bg-green-50/60 px-4 py-3 text-sm text-green-800 mb-4">
+                Tip: add your ward and village to unlock the most precise farm insights.
+              </div>
               <Button onClick={handleAutoLocation} className="w-full h-12 text-lg mb-4" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : 'Use My Current Location'}
                 {!isLoading && <Zap className="ml-2 w-5 h-5" />}
               </Button>
               <div className="text-center text-sm text-gray-500">or enter manually</div>
-              {/* Manual input form can be added here */}
+              <form onSubmit={handleManualLocationSubmit} className="mt-4 space-y-3">
+                <Input
+                  type="text"
+                  placeholder="Ward or town (e.g., Theta Ward, Juja)"
+                  value={manualLocation}
+                  onChange={(e) => setManualLocation(e.target.value)}
+                  disabled={isLoading}
+                  className="h-12 text-lg"
+                />
+                {manualLocationError && (
+                  <p className="text-sm text-red-500">{manualLocationError}</p>
+                )}
+                <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="animate-spin" /> : 'Continue'}
+                  {!isLoading && <ArrowRight className="ml-2 w-5 h-5" />}
+                </Button>
+              </form>
             </div>
           )}
         </div>
